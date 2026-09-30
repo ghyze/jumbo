@@ -1,0 +1,364 @@
+openapi: 3.0.3
+info:
+  title: Nearest Jumbo stores
+  version: 1.0.0
+  description: |
+    Read-only nearest-store search over every entry in the supplied Netherlands
+    dataset. Distances are straight-line geographic distances, not driving
+    distances or travel times. The Haversine formula uses the mean Earth radius
+    6371.0088 km. Results are ranked using unrounded distance, then store ID for
+    exact ties; returned distances are not rounded for presentation.
+
+    The inclusive approximate coverage box is latitude [50.7, 53.6] and longitude
+    [3.2, 7.3]. Globally valid coordinates outside either interval still return
+    results, with an OUTSIDE_SUPPORTED_AREA warning. This box is a fixed coverage
+    heuristic, not a national border or a guarantee about nearby stores.
+tags:
+  - name: Stores
+    description: Search the immutable store snapshot loaded at application startup.
+paths:
+  /api/stores/nearest:
+    get:
+      tags: [Stores]
+      operationId: findNearestStores
+      summary: Find the closest stores to a geographic position
+      description: |
+        Return min(effective limit, available stores) entries, sorted by increasing
+        distance, then ID for exact ties. All seed stores are candidates regardless
+        of opening hours, collection-point status, or location type.
+
+        stores.search.max-results is both the default result count and the maximum;
+        it is five out of the box and can be configured at startup. Omitted limit
+        uses that count. Invalid supplied limit uses that count and adds
+        INVALID_LIMIT_DEFAULTED. A positive decimal integer smaller than the cap
+        reduces the count; larger values, even beyond machine integer range, cap
+        safely without warnings. Warnings can be combined and never change a
+        successful response's status. Small datasets may yield fewer results.
+
+        Examples below use an illustrative three-store dataset to keep responses
+        concise; the production dataset has more stores. Omitted, capped, and
+        invalid limits therefore return all three illustrative stores when the
+        configured count is five.
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          description: |
+            Latitude in decimal degrees, inclusive -90 to 90. Missing, blank,
+            nonnumeric, non-finite, and out-of-range values return 400.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 52.0907
+        - name: longitude
+          in: query
+          required: true
+          description: |
+            Longitude in decimal degrees, inclusive -180 to 180. Missing, blank,
+            nonnumeric, non-finite, and out-of-range values return 400.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: 5.1214
+        - name: limit
+          in: query
+          required: false
+          allowEmptyValue: true
+          description: |
+            Optional raw string. After trimming whitespace, decimal digits
+            representing a positive integer request at most that many stores.
+            Leading zeros are accepted. Values above stores.search.max-results
+            are capped, including arbitrarily long positive digit strings.
+            Omission uses the configured count (five out of the box). Blank,
+            nonnumeric, fractional, zero, negative, or otherwise malformed input
+            also uses the configured count, with INVALID_LIMIT_DEFAULTED rather
+            than a 400 error. There is intentionally no schema default or pattern:
+            runtime configuration and the forgiving parser determine behavior.
+          schema:
+            type: string
+          examples:
+            lower:
+              summary: Return at most two stores
+              value: '2'
+            capped:
+              summary: Capped at the configured maximum
+              value: '20'
+            huge:
+              summary: Caps safely without integer overflow
+              value: '9999999999999999999999999999999999999999'
+            invalid:
+              summary: Use the configured count and warn
+              value: 'many'
+            blank:
+              summary: Empty supplied value also defaults with a warning
+              value: ''
+      responses:
+        '200':
+          description: Nearest stores and any non-blocking warnings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearestStoresResponse'
+              examples:
+                omittedLimit:
+                  summary: Omitted limit; illustrative dataset smaller than configured count
+                  value:
+                    stores:
+                      - &firstStore
+                        id: example-store-a
+                        addressName: Jumbo Utrecht Centrum
+                        city: Utrecht
+                        postalCode: 3511 AA
+                        street: Voorbeeldstraat
+                        street2: '1'
+                        street3: ''
+                        latitude: 52.0907
+                        longitude: 5.1214
+                        distanceKm: 0.0
+                      - &secondStore
+                        id: example-store-b
+                        addressName: Jumbo Utrecht Noord
+                        city: Utrecht
+                        postalCode: 3512 BB
+                        street: Voorbeeldlaan
+                        street2: '2'
+                        street3: A
+                        latitude: 52.1007
+                        longitude: 5.1214
+                        distanceKm: 1.1119508023352598
+                      - &thirdStore
+                        id: example-store-c
+                        addressName: Jumbo Utrecht West
+                        city: Utrecht
+                        postalCode: 3513 CC
+                        street: Voorbeeldplein
+                        street2: '3'
+                        street3: ''
+                        latitude: 52.1107
+                        longitude: 5.1214
+                        distanceKm: 2.223901604671309
+                    warnings: []
+                lowerLimit:
+                  summary: limit=2 returns two stores
+                  value:
+                    stores: [*firstStore, *secondStore]
+                    warnings: []
+                cappedLimit:
+                  summary: limit=20 is capped at five; three stores are available
+                  value:
+                    stores: [*firstStore, *secondStore, *thirdStore]
+                    warnings: []
+                invalidLimit:
+                  summary: limit=many uses configured count and warns
+                  value:
+                    stores: [*firstStore, *secondStore, *thirdStore]
+                    warnings:
+                      - &invalidLimitWarning
+                        code: INVALID_LIMIT_DEFAULTED
+                        message: Invalid limit; using the configured maximum of 5 stores.
+                outsideCoverage:
+                  summary: Valid position (0, 0), limit=1; non-blocking coverage warning
+                  value:
+                    stores:
+                      - &farStore
+                        id: example-store-a
+                        addressName: Jumbo Utrecht Centrum
+                        city: Utrecht
+                        postalCode: 3511 AA
+                        street: Voorbeeldstraat
+                        street2: '1'
+                        street3: ''
+                        latitude: 52.0907
+                        longitude: 5.1214
+                        distanceKm: 5812.0124353538
+                    warnings:
+                      - &coverageWarning
+                        code: OUTSIDE_SUPPORTED_AREA
+                        message: The dataset covers the Netherlands; results may be far away.
+                combinedWarnings:
+                  summary: Outside coverage and invalid limit; one available illustrative store
+                  value:
+                    stores: [*farStore]
+                    warnings: [*invalidLimitWarning, *coverageWarning]
+        '400':
+          description: A required coordinate is missing or invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                missingCoordinate:
+                  value:
+                    type: about:blank
+                    title: Bad Request
+                    status: 400
+                    detail: Required query parameter 'latitude' is missing.
+                    instance: /api/stores/nearest
+                invalidCoordinate:
+                  value:
+                    type: about:blank
+                    title: Bad Request
+                    status: 400
+                    detail: Latitude must be finite and between -90 and 90.
+                    instance: /api/stores/nearest
+                nonnumericCoordinate:
+                  value:
+                    type: about:blank
+                    title: Bad Request
+                    status: 400
+                    detail: Query parameter 'longitude' must be a number.
+                    instance: /api/stores/nearest
+        '500':
+          description: Unexpected server failure; diagnostic details are logged server-side.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Internal Server Error
+                status: 500
+                detail: An unexpected error occurred. Please try again later.
+                instance: /api/stores/nearest
+        default:
+          description: Other HTTP errors use the same problem shape without internal details.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Method Not Allowed
+                status: 405
+                detail: The requested HTTP method is not supported for this endpoint.
+                instance: /api/stores/nearest
+components:
+  schemas:
+    NearestStoresResponse:
+      type: object
+      required: [stores, warnings]
+      properties:
+        stores:
+          type: array
+          description: |
+            Nearest stores sorted by unrounded distance then ID. Length is at most
+            stores.search.max-results (five out of the box), additionally limited
+            by a smaller valid requested limit and the number of available stores.
+          items:
+            $ref: '#/components/schemas/StoreResponse'
+        warnings:
+          type: array
+          description: Empty when neither coverage nor invalid-limit warnings apply.
+          items:
+            $ref: '#/components/schemas/ApiWarning'
+    StoreResponse:
+      type: object
+      required:
+        - id
+        - addressName
+        - city
+        - postalCode
+        - street
+        - street2
+        - street3
+        - latitude
+        - longitude
+        - distanceKm
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: Stable store identifier, copied from the seed's uuid field.
+          example: example-store-a
+        addressName:
+          type: string
+          minLength: 1
+          example: Jumbo Utrecht Centrum
+        city:
+          type: string
+          minLength: 1
+          example: Utrecht
+        postalCode:
+          type: string
+          minLength: 1
+          example: 3511 AA
+        street:
+          type: string
+          minLength: 1
+          description: Original street component; not combined with other address fields.
+          example: Voorbeeldstraat
+        street2:
+          type: string
+          description: Original optional second address component; absent values become empty strings.
+          example: '1'
+        street3:
+          type: string
+          description: Original optional third address component; absent values become empty strings.
+          example: ''
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 52.0907
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: 5.1214
+        distanceKm:
+          type: number
+          format: double
+          minimum: 0
+          description: |
+            Unrounded Haversine distance in kilometres, using Earth radius
+            6371.0088 km. Not driving distance or travel time.
+          example: 1.1119508023352598
+    ApiWarning:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: |
+            Machine-readable warning code. Currently INVALID_LIMIT_DEFAULTED
+            (invalid supplied limit fell back to the configured count) or
+            OUTSIDE_SUPPORTED_AREA (query outside the approximate coverage box).
+          example: OUTSIDE_SUPPORTED_AREA
+        message:
+          type: string
+          description: Human-readable explanation of the non-blocking warning.
+          example: The dataset covers the Netherlands; results may be far away.
+    Problem:
+      type: object
+      description: RFC 9457 problem details without stack traces or implementation details.
+      required: [type, title, status, detail, instance]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI identifying the problem type; about:blank for standard HTTP errors.
+          example: about:blank
+        title:
+          type: string
+          example: Bad Request
+        status:
+          type: integer
+          format: int32
+          minimum: 400
+          maximum: 599
+          example: 400
+        detail:
+          type: string
+          description: Actionable description, safe to expose to callers.
+          example: Latitude must be finite and between -90 and 90.
+        instance:
+          type: string
+          format: uri
+          description: URI reference identifying the request path.
+          example: /api/stores/nearest

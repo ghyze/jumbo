@@ -1,0 +1,8 @@
+{
+  "stores": [
+    {"uuid":"store-b","addressName":"Jumbo Shared B","city":"Shared B","postalCode":"3512 BB","street":"Berkenlaan","latitude":"52.0","longitude":"5.0"},
+    {"uuid":"store-c","addressName":"Jumbo North C","city":"North C","postalCode":"3512 CC","street":"Cederlaan","street2":"3","latitude":"52.01","longitude":"5.0"},
+    {"uuid":"store-a","addressName":"Jumbo Shared A","city":"Shared A","postalCode":"3512 AA","street":"Acacialaan","street2":"17","street3":"bis","latitude":"52.0","longitude":"5.0"}
+  ],
+  "attributes": {}
+}

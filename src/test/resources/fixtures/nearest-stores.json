@@ -1,0 +1,17 @@
+{
+  "stores": [
+    {"uuid":"store-l","addressName":"Jumbo North L","city":"North L","postalCode":"3512 LL","street":"Lindenlaan","street2":"12","street3":"L","latitude":"52.10","longitude":"5.0"},
+    {"uuid":"store-b","addressName":"Jumbo Shared B","city":"Shared B","postalCode":"3512 BB","street":"Berkenlaan","latitude":"52.0","longitude":"5.0","collectionPoint":true},
+    {"uuid":"store-j","addressName":"Jumbo North J","city":"North J","postalCode":"3512 JJ","street":"Jasmijnlaan","street2":"10","street3":"J","latitude":"52.08","longitude":"5.0"},
+    {"uuid":"store-f","addressName":"Jumbo North F","city":"North F","postalCode":"3512 FF","street":"Fresialaan","street2":"6","street3":"F","latitude":"52.04","longitude":"5.0"},
+    {"uuid":"store-d","addressName":"Jumbo North D","city":"North D","postalCode":"3512 DD","street":"Dennenlaan","street2":"4","street3":"D","latitude":"52.02","longitude":"5.0"},
+    {"uuid":"store-a","addressName":"Jumbo Shared A","city":"Shared A","postalCode":"3512 AA","street":"Acacialaan","street2":"17","street3":"bis","latitude":"52.0","longitude":"5.0"},
+    {"uuid":"store-k","addressName":"Jumbo North K","city":"North K","postalCode":"3512 KK","street":"Kastanjelaan","street2":"11","street3":"K","latitude":"52.09","longitude":"5.0"},
+    {"uuid":"store-h","addressName":"Jumbo North H","city":"North H","postalCode":"3512 HH","street":"Hazelaarlaan","street2":"8","street3":"H","latitude":"52.06","longitude":"5.0"},
+    {"uuid":"store-e","addressName":"Jumbo North E","city":"North E","postalCode":"3512 EE","street":"Eikenlaan","street2":"5","street3":"E","latitude":"52.03","longitude":"5.0"},
+    {"uuid":"store-i","addressName":"Jumbo North I","city":"North I","postalCode":"3512 II","street":"Iepenlaan","street2":"9","street3":"I","latitude":"52.07","longitude":"5.0"},
+    {"uuid":"store-c","addressName":"Jumbo North C","city":"North C","postalCode":"3512 CC","street":"Cederlaan","street2":"3","street3":null,"latitude":"52.01","longitude":"5.0"},
+    {"uuid":"store-g","addressName":"Jumbo North G","city":"North G","postalCode":"3512 GG","street":"Goudenregenlaan","street2":"7","street3":"G","latitude":"52.05","longitude":"5.0"}
+  ],
+  "attributes": {"purpose":"Deliberately shuffled, with an exact-location tie and string coordinates"}
+}

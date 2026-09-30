@@ -1,0 +1,134 @@
+@baseUrl = http://localhost:8080
+@configuredMax = 5
+
+### Default count and ascending distances (supplied dataset has 587 stores)
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214
+Accept: application/json
+
+> {%
+    client.test("Default count, ordering, and no warnings", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        const stores = response.body.stores;
+        client.assert(stores.length === Math.min(Number(request.variables.get("configuredMax")), 587), "Configured default count");
+        client.assert(response.body.warnings.length === 0, "No warnings for a normal request");
+        for (let i = 1; i < stores.length; i++) {
+            client.assert(stores[i - 1].distanceKm <= stores[i].distanceKm, "Distances must be ascending");
+        }
+    });
+%}
+
+### Request fewer results
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=3
+Accept: application/json
+
+> {%
+    client.test("Smaller count honors application cap", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.stores.length === Math.min(3, Number(request.variables.get("configuredMax"))), "Smaller result count");
+    });
+%}
+
+### Arbitrarily large positive limit is capped safely
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=99999999999999999999999999999999999999999999999999
+Accept: application/json
+
+> {%
+    client.test("Oversized limit is capped", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.stores.length === Math.min(Number(request.variables.get("configuredMax")), 587), "Application cap");
+        client.assert(response.body.warnings.length === 0, "Normal capping needs no warning");
+    });
+%}
+
+### Invalid limit defaults to the application setting with a warning
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=invalid
+Accept: application/json
+
+> {%
+    client.test("Invalid limit falls back", function () {
+        client.assert(response.status === 200, "Expected HTTP 200, not a validation error");
+        client.assert(response.body.stores.length === Math.min(Number(request.variables.get("configuredMax")), 587), "Configured fallback");
+        client.assert(response.body.warnings.some(w => w.code === "INVALID_LIMIT_DEFAULTED"), "Expected fallback warning");
+    });
+%}
+
+### Blank, zero, negative, and fractional limits also fall back
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=
+Accept: application/json
+
+###
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=0
+Accept: application/json
+
+###
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=-1
+Accept: application/json
+
+###
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=2.5
+Accept: application/json
+
+### Exact known store location
+GET {{baseUrl}}/api/stores/nearest?latitude=51.778461&longitude=4.615551&limit=1
+Accept: application/json
+
+> {%
+    client.test("Exact store location ranks first", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.stores[0].id === "EOgKYx4XFiQAAAFJa_YYZ4At", "Expected known store");
+        client.assert(response.body.stores[0].distanceKm === 0, "Distance at same location is zero");
+    });
+%}
+
+### Valid coordinates outside coverage still produce results
+GET {{baseUrl}}/api/stores/nearest?latitude=0&longitude=0
+Accept: application/json
+
+> {%
+    client.test("Coverage warning does not reject coordinates", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.stores.length > 0, "Results are still returned");
+        client.assert(response.body.warnings.some(w => w.code === "OUTSIDE_SUPPORTED_AREA"), "Expected coverage warning");
+    });
+%}
+
+### Both fallback and coverage warnings
+GET {{baseUrl}}/api/stores/nearest?latitude=0&longitude=0&limit=-1
+Accept: application/json
+
+> {%
+    client.test("Warnings can be combined", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.warnings.some(w => w.code === "OUTSIDE_SUPPORTED_AREA"), "Coverage warning");
+        client.assert(response.body.warnings.some(w => w.code === "INVALID_LIMIT_DEFAULTED"), "Limit warning");
+    });
+%}
+
+### Missing required coordinate
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907
+Accept: application/json, application/problem+json
+
+> {%
+    client.test("Missing coordinate returns a problem", function () {
+        client.assert(response.status === 400, "Expected HTTP 400");
+        client.assert(response.body.status === 400, "Problem status");
+        client.assert(!!response.body.detail, "Actionable detail");
+        client.assert(response.body.instance === "/api/stores/nearest", "Problem instance");
+    });
+%}
+
+### Nonnumeric coordinate
+GET {{baseUrl}}/api/stores/nearest?latitude=not-a-number&longitude=5.1214
+Accept: application/json, application/problem+json
+
+### Globally out-of-range coordinate
+GET {{baseUrl}}/api/stores/nearest?latitude=91&longitude=5.1214
+Accept: application/json, application/problem+json
+
+### Non-finite coordinate
+GET {{baseUrl}}/api/stores/nearest?latitude=NaN&longitude=5.1214
+Accept: application/json, application/problem+json
+
+### Minimal health endpoint
+GET {{baseUrl}}/actuator/health
+Accept: application/json
