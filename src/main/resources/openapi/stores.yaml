@@ -306,6 +306,7 @@ components:
       properties:
         code:
           type: string
+          enum: [OUTSIDE_SUPPORTED_AREA]
           description: Machine-readable warning code.
           example: OUTSIDE_SUPPORTED_AREA
         message:

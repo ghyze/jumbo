@@ -26,7 +26,7 @@ public class StoreController implements StoresApi {
         var result = limit == null ? service.findNearest(coordinates) : service.findNearest(coordinates, limit);
         var stores = result.stores().stream().map(StoreController::toResponse).toList();
         var warnings = result.warnings().stream()
-                .map(warning -> new ApiWarning(warning.code(), warning.message()))
+                .map(warning -> new ApiWarning(ApiWarning.CodeEnum.fromValue(warning.code().name()), warning.message()))
                 .toList();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(new NearestStoresResponse(stores, warnings));
