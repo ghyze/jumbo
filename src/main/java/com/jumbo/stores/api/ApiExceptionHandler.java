@@ -1,5 +1,6 @@
 package com.jumbo.stores.api;
 
+import com.jumbo.stores.domain.InvalidCoordinatesException;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ElementKind;
 import java.net.URI;
@@ -24,9 +25,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String UNEXPECTED_ERROR =
             "An unexpected server error occurred. Please try again later.";
 
-    @ExceptionHandler(StoreController.InvalidCoordinatesException.class)
+    @ExceptionHandler(InvalidCoordinatesException.class)
     public ResponseEntity<Object> handleInvalidCoordinates(
-            StoreController.InvalidCoordinatesException exception, WebRequest request) {
+            InvalidCoordinatesException exception, WebRequest request) {
         return handleExceptionInternal(exception, null, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 

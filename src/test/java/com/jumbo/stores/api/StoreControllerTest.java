@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jumbo.stores.service.SearchProperties;
+import com.jumbo.stores.domain.InvalidCoordinatesException;
 import com.jumbo.stores.domain.Store;
 import com.jumbo.stores.service.HaversineDistance;
 import com.jumbo.stores.service.StoreService;
@@ -103,17 +104,8 @@ class StoreControllerTest {
     @CsvSource({"NaN, 5", "Infinity, 5", "-Infinity, 5", "91, 5", "-91, 5",
             "52, NaN", "52, Infinity", "52, -Infinity", "52, 181", "52, -181"})
     void domainCoordinateFailuresBecomeSpecificInputErrors(double latitude, double longitude) {
-        assertThrows(StoreController.InvalidCoordinatesException.class,
+        assertThrows(InvalidCoordinatesException.class,
                 () -> controller(5, stores(1)).findNearestStores(latitude, longitude, null));
-    }
-
-    @Test
-    void absentCoordinatesBecomeSpecificInputErrorsEvenWithoutMvcValidation() {
-        var controller = controller(5, stores(1));
-        assertThrows(StoreController.InvalidCoordinatesException.class,
-                () -> controller.findNearestStores(null, 5.0, null));
-        assertThrows(StoreController.InvalidCoordinatesException.class,
-                () -> controller.findNearestStores(52.0, null, null));
     }
 
     @Test

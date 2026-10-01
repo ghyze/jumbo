@@ -26,31 +26,20 @@ public class StoreController implements StoresApi {
     @Override
     public ResponseEntity<NearestStoresResponse> findNearestStores(
             Double latitude, Double longitude, String limit) {
-        Coordinates coordinates = toCoordinates(latitude, longitude);
         var resolvedLimit = limitResolver.resolve(limit);
-        var result = service.findNearest(coordinates, resolvedLimit.count());
+        var result = service.findNearest(new Coordinates(latitude, longitude), resolvedLimit.count());
         var stores = result.stores().stream().map(StoreController::toResponse).toList();
-        var warnings = new ArrayList<ApiWarning>();
+        var warnings = result.warnings().stream()
+                .map(warning -> new ApiWarning(warning.code(), warning.message()))
+                .toList();
         if (resolvedLimit.defaulted()) {
-            warnings.add(new ApiWarning("INVALID_LIMIT_DEFAULTED",
+            warnings = new ArrayList<>(warnings);
+            warnings.addFirst(new ApiWarning("INVALID_LIMIT_DEFAULTED",
                     "limit must be a positive decimal integer; the configured count of "
                             + resolvedLimit.count() + " was used."));
         }
-        result.warnings().forEach(warning -> warnings.add(new ApiWarning(warning.code(), warning.message())));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(new NearestStoresResponse(stores, warnings));
-    }
-
-    private static Coordinates toCoordinates(Double latitude, Double longitude) {
-        if (latitude == null || longitude == null) {
-            throw new InvalidCoordinatesException();
-        }
-        try {
-            return new Coordinates(latitude, longitude);
-        } catch (IllegalArgumentException exception) {
-            // Only domain input construction is a client error, not subsequent service failures.
-            throw new InvalidCoordinatesException();
-        }
     }
 
     static StoreResponse toResponse(NearestStore nearest) {
@@ -58,8 +47,5 @@ public class StoreController implements StoresApi {
         return new StoreResponse(store.id(), store.addressName(), store.city(), store.postalCode(),
                 store.street(), store.street2(), store.street3(), store.coordinates().latitude(),
                 store.coordinates().longitude(), nearest.distanceKm());
-    }
-
-    static final class InvalidCoordinatesException extends RuntimeException {
     }
 }
