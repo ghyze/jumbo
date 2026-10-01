@@ -68,7 +68,7 @@ public final class HttpAssertions {
         assertEquals(ORDERED_IDS.subList(0, count), response.jsonPath().getList("stores.id"));
     }
 
-    public static void assertBadCoordinates(Response response) {
+    public static void assertBadParameter(Response response, String parameter) {
         response.then().statusCode(400).contentType("application/problem+json");
         Map<String, Object> body = response.jsonPath().getMap("$");
         assertTrue(body.keySet().containsAll(Set.of("type", "title", "status", "detail", "instance")));
@@ -78,9 +78,17 @@ public final class HttpAssertions {
         assertEquals(PATH, body.get("instance"));
         String detail = assertInstanceOf(String.class, body.get("detail"));
         assertFalse(detail.isBlank());
-        assertTrue(detail.toLowerCase().contains("latitude") || detail.toLowerCase().contains("longitude"),
-                "Coordinate errors should identify the invalid parameter: " + detail);
+        assertTrue(detail.contains("'" + parameter + "'") || detail.toLowerCase().contains(parameter),
+                "Problem detail should identify the invalid parameter: " + detail);
         assertFalse(body.containsKey("trace"));
         assertFalse(body.containsKey("exception"));
+    }
+
+    public static void assertBadCoordinates(Response response, String parameter) {
+        assertBadParameter(response, parameter);
+    }
+
+    public static void assertBadLimit(Response response) {
+        assertBadParameter(response, "limit");
     }
 }

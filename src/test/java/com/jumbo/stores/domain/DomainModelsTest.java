@@ -61,8 +61,8 @@ class DomainModelsTest {
 
     @Test
     void validatesWarningsAndNearestStore() {
-        assertThrows(IllegalArgumentException.class, () -> new SearchWarning("", "message"));
-        assertThrows(IllegalArgumentException.class, () -> new SearchWarning("CODE", null));
+        assertThrows(NullPointerException.class, () -> new SearchWarning(null, "message"));
+        assertThrows(IllegalArgumentException.class, () -> new SearchWarning(WarningCode.OUTSIDE_SUPPORTED_AREA, null));
         assertThrows(NullPointerException.class, () -> new NearestStore(null, 0));
         assertEquals(0, TestObjects.nearestStore().distanceKm(0).build().distanceKm());
     }

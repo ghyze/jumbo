@@ -28,45 +28,44 @@ Accept: application/json
     });
 %}
 
-### Arbitrarily large positive limit is capped safely
-GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=99999999999999999999999999999999999999999999999999
-Accept: application/json
-
-> {%
-    client.test("Oversized limit is capped", function () {
-        client.assert(response.status === 200, "Expected HTTP 200");
-        client.assert(response.body.stores.length === Math.min(Number(request.variables.get("configuredMax")), 587), "Application cap");
-        client.assert(response.body.warnings.length === 0, "Normal capping needs no warning");
-    });
-%}
-
-### Invalid limit defaults to the application setting with a warning
-GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=invalid
-Accept: application/json
-
-> {%
-    client.test("Invalid limit falls back", function () {
-        client.assert(response.status === 200, "Expected HTTP 200, not a validation error");
-        client.assert(response.body.stores.length === Math.min(Number(request.variables.get("configuredMax")), 587), "Configured fallback");
-        client.assert(response.body.warnings.some(w => w.code === "INVALID_LIMIT_DEFAULTED"), "Expected fallback warning");
-    });
-%}
-
-### Blank, zero, negative, and fractional limits also fall back
+### Blank limit behaves like omission
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=
 Accept: application/json
 
+> {%
+    client.test("Blank limit uses configured default", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.stores.length === Math.min(Number(request.variables.get("configuredMax")), 587), "Configured default");
+        client.assert(response.body.warnings.length === 0, "No warning for blank-as-omitted");
+    });
+%}
+
+### Invalid limits are request errors
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=invalid
+Accept: application/json, application/problem+json
+
+> {%
+    client.test("Invalid limit is rejected", function () {
+        client.assert(response.status === 400, "Expected HTTP 400");
+        client.assert(response.body.detail.includes("limit"), "Problem names limit");
+    });
+%}
+
 ###
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=0
-Accept: application/json
+Accept: application/json, application/problem+json
 
 ###
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=-1
-Accept: application/json
+Accept: application/json, application/problem+json
 
 ###
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=2.5
-Accept: application/json
+Accept: application/json, application/problem+json
+
+###
+GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=2147483648
+Accept: application/json, application/problem+json
 
 ### Exact known store location
 GET {{baseUrl}}/api/stores/nearest?latitude=51.778461&longitude=4.615551&limit=1
@@ -92,17 +91,6 @@ Accept: application/json
     });
 %}
 
-### Both fallback and coverage warnings
-GET {{baseUrl}}/api/stores/nearest?latitude=0&longitude=0&limit=-1
-Accept: application/json
-
-> {%
-    client.test("Warnings can be combined", function () {
-        client.assert(response.status === 200, "Expected HTTP 200");
-        client.assert(response.body.warnings.some(w => w.code === "OUTSIDE_SUPPORTED_AREA"), "Coverage warning");
-        client.assert(response.body.warnings.some(w => w.code === "INVALID_LIMIT_DEFAULTED"), "Limit warning");
-    });
-%}
 
 ### Missing required coordinate
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907

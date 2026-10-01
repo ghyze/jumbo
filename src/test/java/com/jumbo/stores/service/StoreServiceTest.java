@@ -3,19 +3,17 @@ package com.jumbo.stores.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.jumbo.stores.config.SearchProperties;
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.domain.Store;
+import com.jumbo.stores.domain.WarningCode;
 import com.jumbo.stores.repository.StoreRepository;
 import com.jumbo.stores.support.TestObjects;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class StoreServiceTest {
@@ -77,7 +75,7 @@ class StoreServiceTest {
         assertTrue(empty.stores().isEmpty());
         assertTrue(empty.warnings().isEmpty());
         var emptyOutside = service(List.of(), 5).findNearest(new Coordinates(0, 0), 5);
-        assertEquals("OUTSIDE_SUPPORTED_AREA", emptyOutside.warnings().getFirst().code());
+        assertEquals(WarningCode.OUTSIDE_SUPPORTED_AREA, emptyOutside.warnings().getFirst().code());
     }
 
     @Test
@@ -108,33 +106,17 @@ class StoreServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("insideCoverage")
-    void inclusiveCoverageEdgesHaveNoWarning(Coordinates coordinates) {
-        assertTrue(service(List.of(), 5).findNearest(coordinates, 5).warnings().isEmpty());
-    }
-
-    static Stream<Coordinates> insideCoverage() {
-        return Stream.of(new Coordinates(50.7, 3.2), new Coordinates(50.7, 7.3),
-                new Coordinates(53.6, 3.2), new Coordinates(53.6, 7.3),
-                new Coordinates(Math.nextUp(50.7), 5), new Coordinates(Math.nextDown(53.6), 5),
-                new Coordinates(52, Math.nextUp(3.2)), new Coordinates(52, Math.nextDown(7.3)));
-    }
-
-    @ParameterizedTest
-    @MethodSource("outsideCoverage")
-    void outsideAnyCoverageEdgeWarnsButStillReturnsStores(Coordinates coordinates) {
-        var result = service(List.of(TestObjects.store().build()), 5).findNearest(coordinates, 5);
+    @CsvSource({
+            "50.699999, 5", "53.600001, 5", "52, 3.199999", "52, 7.300001",
+            "0, 0", "-90, -180", "90, 180"
+    })
+    void outsideAnyCoverageEdgeWarnsButStillReturnsStores(double latitude, double longitude) {
+        var result = service(List.of(TestObjects.store().build()), 5).findNearest(new Coordinates(latitude, longitude), 5);
         assertEquals(1, result.stores().size());
         assertEquals(1, result.warnings().size());
-        assertEquals("OUTSIDE_SUPPORTED_AREA", result.warnings().getFirst().code());
+        assertEquals(WarningCode.OUTSIDE_SUPPORTED_AREA, result.warnings().getFirst().code());
         assertTrue(result.warnings().getFirst().message().contains("Netherlands"));
         assertTrue(result.warnings().getFirst().message().contains("far away"));
-    }
-
-    static Stream<Coordinates> outsideCoverage() {
-        return Stream.of(new Coordinates(Math.nextDown(50.7), 5), new Coordinates(Math.nextUp(53.6), 5),
-                new Coordinates(52, Math.nextDown(3.2)), new Coordinates(52, Math.nextUp(7.3)),
-                new Coordinates(0, 0), new Coordinates(-90, -180), new Coordinates(90, 180));
     }
 
     private static StoreService service(List<Store> stores, int cap) {

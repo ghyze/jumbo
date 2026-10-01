@@ -2,7 +2,6 @@ package com.jumbo.stores.acceptance.http;
 
 import static com.jumbo.stores.acceptance.HttpAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jumbo.stores.NearestStoresApplication;
 import com.jumbo.stores.acceptance.FixtureServer;
 import io.restassured.response.Response;
@@ -15,6 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -46,29 +46,25 @@ class NearestStoresEndpointTest extends FixtureServer {
         }
     }
 
-    @ParameterizedTest(name = "limit={0}, count={1}, warning={2}")
+    @ParameterizedTest(name = "limit={0}, count={1}")
     @MethodSource("limits")
-    void resolvesRawLimitsWithoutChangingSuccessContentType(String limit, int count, boolean invalid) {
+    void resolvesValidLimitsWithoutChangingSuccessContentType(String limit, int count) {
         Response response = search(port, Map.of("latitude", "52", "longitude", "5", "limit", limit));
-        assertSuccess(response, count, invalid ? new String[]{"INVALID_LIMIT_DEFAULTED"} : new String[0]);
+        assertSuccess(response, count);
         assertFixtureOrder(response, count);
-        if (invalid) {
-            assertTrue(response.jsonPath().getString("warnings[0].message").contains("5"));
-        }
     }
 
     static Stream<Arguments> limits() {
         return Stream.of(
-                Arguments.of("1", 1, false), Arguments.of("3", 3, false),
-                Arguments.of("5", 5, false), Arguments.of("20", 5, false),
-                Arguments.of("0003", 3, false), Arguments.of(" 2 ", 2, false),
-                Arguments.of("9".repeat(500), 5, false),
-                Arguments.of("0".repeat(500) + "3", 3, false),
-                Arguments.of("", 5, true), Arguments.of("   ", 5, true),
-                Arguments.of("many", 5, true), Arguments.of("2.5", 5, true),
-                Arguments.of("0", 5, true), Arguments.of("000", 5, true),
-                Arguments.of("-1", 5, true), Arguments.of("+2", 5, true),
-                Arguments.of("1e2", 5, true), Arguments.of("NaN", 5, true));
+                Arguments.of("1", 1), Arguments.of("3", 3),
+                Arguments.of("5", 5), Arguments.of("20", 5),
+                Arguments.of("", 5));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"many", "0", "-1", "2.5", "2147483648"})
+    void rejectsInvalidLimits(String limit) {
+        assertBadLimit(search(port, Map.of("latitude", "52", "longitude", "5", "limit", limit)));
     }
 
     @ParameterizedTest(name = "invalid {0}={1}")
@@ -82,7 +78,7 @@ class NearestStoresEndpointTest extends FixtureServer {
         } else {
             query.put(coordinate, value);
         }
-        assertBadCoordinates(search(port, query));
+        assertBadCoordinates(search(port, query), coordinate);
     }
 
     static Stream<Arguments> invalidCoordinates() {
@@ -97,7 +93,7 @@ class NearestStoresEndpointTest extends FixtureServer {
 
     @Test
     void rejectsBothMissingCoordinates() {
-        assertBadCoordinates(search(port, Map.of()));
+        assertBadCoordinates(search(port, Map.of()), "latitude");
     }
 
     @ParameterizedTest
@@ -111,14 +107,5 @@ class NearestStoresEndpointTest extends FixtureServer {
                                                                    boolean outside) {
         Response response = search(port, Map.of("latitude", latitude, "longitude", longitude));
         assertSuccess(response, 5, outside ? new String[]{"OUTSIDE_SUPPORTED_AREA"} : new String[0]);
-    }
-
-    @Test
-    void combinesLimitAndCoverageWarningsWithoutLosingResults() {
-        Response response = search(port, Map.of("latitude", "0", "longitude", "0", "limit", "many"));
-        assertSuccess(response, 5, "INVALID_LIMIT_DEFAULTED", "OUTSIDE_SUPPORTED_AREA");
-        List<String> messages = response.jsonPath().getList("warnings.message");
-        assertTrue(messages.stream().anyMatch(message -> message.contains("5")));
-        assertTrue(messages.stream().anyMatch(message -> message.contains("Netherlands")));
     }
 }

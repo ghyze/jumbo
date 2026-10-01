@@ -5,6 +5,7 @@ import com.jumbo.stores.domain.NearestStore;
 import com.jumbo.stores.domain.SearchResult;
 import com.jumbo.stores.domain.SearchWarning;
 import com.jumbo.stores.domain.Store;
+import com.jumbo.stores.domain.WarningCode;
 import java.util.List;
 
 public final class TestObjects {
@@ -26,7 +27,7 @@ public final class TestObjects {
     }
 
     public static SearchWarning.SearchWarningBuilder searchWarning() {
-        return SearchWarning.builder().code("OUTSIDE_SUPPORTED_AREA").message("Outside dataset coverage.");
+        return SearchWarning.builder().code(WarningCode.OUTSIDE_SUPPORTED_AREA).message("Outside dataset coverage.");
     }
 
     public static SearchResult.SearchResultBuilder searchResult() {

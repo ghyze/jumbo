@@ -20,15 +20,19 @@ class CoordinatesTest {
     @ParameterizedTest
     @ValueSource(doubles = {-90.000001, 90.000001, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void rejectsInvalidLatitude(double latitude) {
-        assertThrows(IllegalArgumentException.class,
+        var exception = assertThrows(InvalidCoordinatesException.class,
                 () -> TestObjects.coordinates().latitude(latitude).build());
+        assertEquals("latitude", exception.field());
+        assertEquals(-1, exception.getMessage().indexOf(Double.toString(latitude)));
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {-180.000001, 180.000001, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void rejectsInvalidLongitude(double longitude) {
-        assertThrows(IllegalArgumentException.class,
+        var exception = assertThrows(InvalidCoordinatesException.class,
                 () -> TestObjects.coordinates().longitude(longitude).build());
+        assertEquals("longitude", exception.field());
+        assertEquals(-1, exception.getMessage().indexOf(Double.toString(longitude)));
     }
 
     @Test

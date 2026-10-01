@@ -1,4 +1,4 @@
-package com.jumbo.stores.config;
+package com.jumbo.stores.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +32,14 @@ class SearchPropertiesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", " ", "no", "1.5", "0", "-1", "2147483648", "999999999999999999999", "NaN"})
+    @ValueSource(strings = {"", " "})
+    void failsStartupForExplicitBlankValue(String value) {
+        contextRunner.withPropertyValues("stores.search.max-results=" + value).run(context ->
+                assertThat(context).hasFailed());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"no", "1.5", "0", "-1", "2147483648", "999999999999999999999", "NaN"})
     void failsStartupForExplicitInvalidValue(String value) {
         contextRunner.withPropertyValues("stores.search.max-results=" + value).run(context -> {
             assertThat(context).hasFailed();
