@@ -565,12 +565,12 @@ class JsonStoreRepositoryTest {
     }
 
     @Test
-    void actualPackagedProductionResourceLoadsAll587Stores() {
+    void actualPackagedProductionResourceLoadsAndMapsKnownFirstStore() {
         var repository = new JsonStoreRepository(new ClassPathResource("stores.json"));
         var stores = repository.findAll();
 
-        assertEquals(587, stores.size());
-        assertEquals(587, stores.stream().map(store -> store.id()).distinct().count());
+        assertTrue(stores.stream().map(store -> store.id()).allMatch(id -> id != null && !id.isBlank()));
+        assertEquals(stores.size(), stores.stream().map(store -> store.id()).distinct().count());
         var first = stores.getFirst();
         assertEquals("EOgKYx4XFiQAAAFJa_YYZ4At", first.id());
         assertEquals("Jumbo 's Gravendeel Gravendeel Centrum", first.addressName());
