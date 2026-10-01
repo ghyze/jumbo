@@ -1,7 +1,6 @@
 package com.jumbo.demo.config;
 
 import static com.jumbo.demo.util.StringUtil.isBlank;
-
 import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;

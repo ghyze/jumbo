@@ -3,7 +3,6 @@ package com.jumbo.demo.acceptance.http;
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.jumbo.demo.DemoApplication;
 import com.jumbo.demo.acceptance.FixtureServer;
 import io.restassured.response.Response;

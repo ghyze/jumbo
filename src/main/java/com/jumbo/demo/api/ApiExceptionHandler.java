@@ -3,7 +3,6 @@ package com.jumbo.demo.api;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ElementKind;
 import java.net.URI;
-
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

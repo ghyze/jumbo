@@ -3,7 +3,6 @@ package com.jumbo.demo.acceptance.cucumber;
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;

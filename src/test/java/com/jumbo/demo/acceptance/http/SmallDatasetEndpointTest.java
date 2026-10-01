@@ -1,7 +1,6 @@
 package com.jumbo.demo.acceptance.http;
 
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
-
 import com.jumbo.demo.DemoApplication;
 import com.jumbo.demo.repository.StoreRepository;
 import io.restassured.response.Response;

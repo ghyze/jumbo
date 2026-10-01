@@ -2,7 +2,6 @@ package com.jumbo.demo.acceptance.http;
 
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import com.jumbo.demo.DemoApplication;
 import com.jumbo.demo.repository.StoreRepository;
 import java.util.Map;

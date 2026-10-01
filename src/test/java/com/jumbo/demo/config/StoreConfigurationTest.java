@@ -3,7 +3,6 @@ package com.jumbo.demo.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.jumbo.demo.repository.StoreRepository;
 import com.jumbo.demo.service.DistanceCalculator;
 import com.jumbo.demo.service.HaversineDistance;

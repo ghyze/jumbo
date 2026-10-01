@@ -3,7 +3,6 @@ package com.jumbo.demo.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.jumbo.demo.domain.Coordinates;
 import com.jumbo.demo.support.TestObjects;
 import org.junit.jupiter.api.Test;

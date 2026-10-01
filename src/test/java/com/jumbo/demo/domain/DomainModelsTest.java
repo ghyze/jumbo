@@ -2,7 +2,6 @@ package com.jumbo.demo.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import com.jumbo.demo.support.TestObjects;
 import java.util.ArrayList;
 import java.util.List;

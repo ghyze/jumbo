@@ -1,7 +1,6 @@
 package com.jumbo.demo.domain;
 
 import static com.jumbo.demo.util.StringUtil.isBlank;
-
 import lombok.Builder;
 
 @Builder
