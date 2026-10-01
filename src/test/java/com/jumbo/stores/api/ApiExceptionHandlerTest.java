@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.jumbo.stores.config.SearchProperties;
+import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.service.HaversineDistance;
 import com.jumbo.stores.service.StoreService;
 import jakarta.validation.ConstraintViolationException;

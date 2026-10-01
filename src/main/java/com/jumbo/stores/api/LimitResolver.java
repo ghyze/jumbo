@@ -1,6 +1,6 @@
 package com.jumbo.stores.api;
 
-import com.jumbo.stores.config.SearchProperties;
+import com.jumbo.stores.service.SearchProperties;
 
 final class LimitResolver {
     private final int maximum;

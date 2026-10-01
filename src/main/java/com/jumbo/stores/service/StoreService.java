@@ -1,6 +1,5 @@
 package com.jumbo.stores.service;
 
-import com.jumbo.stores.config.SearchProperties;
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.domain.NearestStore;
 import com.jumbo.stores.domain.SearchResult;

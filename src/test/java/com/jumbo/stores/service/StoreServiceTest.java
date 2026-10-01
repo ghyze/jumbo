@@ -3,7 +3,6 @@ package com.jumbo.stores.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.jumbo.stores.config.SearchProperties;
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.domain.Store;
 import com.jumbo.stores.repository.StoreRepository;

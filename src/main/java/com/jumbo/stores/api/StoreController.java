@@ -4,7 +4,7 @@ import com.jumbo.stores.api.generated.StoresApi;
 import com.jumbo.stores.api.generated.model.ApiWarning;
 import com.jumbo.stores.api.generated.model.NearestStoresResponse;
 import com.jumbo.stores.api.generated.model.StoreResponse;
-import com.jumbo.stores.config.SearchProperties;
+import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.domain.NearestStore;
 import com.jumbo.stores.service.StoreService;
