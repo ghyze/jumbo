@@ -23,21 +23,13 @@ paths:
       operationId: findNearestStores
       summary: Find the closest stores to a geographic position
       description: |
-        Return min(effective limit, available stores) entries, sorted by increasing
-        distance, then ID for exact ties. All seed stores are candidates regardless
-        of opening hours, collection-point status, or location type.
-
-        stores.search.max-results is both the default result count and the maximum;
-        it is five out of the box and can be configured at startup. Omitted or
-        blank limit uses that count. A positive integer smaller than the cap
-        reduces the count; larger values are capped silently. Invalid supplied
-        limits return 400. Warnings never change a successful response's status.
-        Small datasets may yield fewer results.
+        Return nearest-store entries sorted by increasing distance, then ID for exact
+        ties. All seed stores are candidates regardless of opening hours,
+        collection-point status, or location type. Warnings never change a
+        successful response's status.
 
         Examples below use an illustrative three-store dataset to keep responses
-        concise; the production dataset has more stores. Omitted and capped
-        limits therefore return all three illustrative stores when the configured
-        count is five.
+        concise; the production dataset has more stores.
       parameters:
         - name: latitude
           in: query
@@ -225,10 +217,7 @@ components:
       properties:
         stores:
           type: array
-          description: |
-            Nearest stores sorted by unrounded distance then ID. Length is at most
-            stores.search.max-results (five out of the box), additionally limited
-            by a smaller valid requested limit and the number of available stores.
+          description: Nearest stores sorted by unrounded distance, then ID for exact ties.
           items:
             $ref: '#/components/schemas/StoreResponse'
         warnings:
