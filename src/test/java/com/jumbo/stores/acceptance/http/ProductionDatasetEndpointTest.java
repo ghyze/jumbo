@@ -1,7 +1,7 @@
 package com.jumbo.stores.acceptance.http;
 
 import static com.jumbo.stores.acceptance.HttpAssertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import com.jumbo.stores.NearestStoresApplication;
 import com.jumbo.stores.repository.StoreRepository;
 import java.util.Map;
@@ -20,7 +20,7 @@ class ProductionDatasetEndpointTest {
 
     @Test
     void packagedProductionSnapshotLoadsAll587StoresAndServesFiveOverHttp() {
-        assertEquals(587, storeRepository.findAll().size());
+        assertThat(storeRepository.findAll()).hasSize(587);
         assertSuccess(search(port, Map.of("latitude", "52.0907", "longitude", "5.1214")), 5);
     }
 }

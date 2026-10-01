@@ -4,10 +4,7 @@ import static io.restassured.RestAssured.given;
 import static io.restassured.config.JsonConfig.jsonConfig;
 import static io.restassured.config.RestAssuredConfig.config;
 import static io.restassured.path.json.config.JsonPathConfig.NumberReturnType.DOUBLE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import io.restassured.response.Response;
 import java.util.List;
 import java.util.Map;
@@ -31,57 +28,58 @@ public final class HttpAssertions {
     public static void assertSuccess(Response response, int count, String... warnings) {
         response.then().statusCode(200).contentType("application/json");
         Map<String, Object> body = response.jsonPath().getMap("$");
-        assertEquals(Set.of("stores", "warnings"), body.keySet());
+        assertThat(body).containsOnlyKeys("stores", "warnings");
         List<Map<String, Object>> stores = response.jsonPath().getList("stores");
-        assertEquals(count, stores.size());
+        assertThat(stores).hasSize(count);
         double previous = -1;
         for (Map<String, Object> store : stores) {
-            assertEquals(Set.of("id", "addressName", "city", "postalCode", "street", "street2",
-                    "street3", "latitude", "longitude", "distanceKm"), store.keySet());
-            for (String field : List.of("id", "addressName", "city", "postalCode", "street",
-                    "street2", "street3")) {
-                assertInstanceOf(String.class, store.get(field), field);
+            assertThat(store).containsOnlyKeys("id", "addressName", "city", "postalCode", "street", "street2",
+                    "street3", "latitude", "longitude", "distanceKm");
+            for (String field : List.of("id", "addressName", "city", "postalCode", "street", "street2", "street3")) {
+                assertThat(store.get(field)).as(field).isInstanceOf(String.class);
                 if (!field.equals("street2") && !field.equals("street3")) {
-                    assertFalse(((String) store.get(field)).isBlank(), field);
+                    assertThat((String) store.get(field)).as(field).isNotBlank();
                 }
             }
-            double latitude = assertInstanceOf(Number.class, store.get("latitude")).doubleValue();
-            double longitude = assertInstanceOf(Number.class, store.get("longitude")).doubleValue();
-            double distance = assertInstanceOf(Number.class, store.get("distanceKm")).doubleValue();
-            assertTrue(Double.isFinite(latitude) && latitude >= -90 && latitude <= 90);
-            assertTrue(Double.isFinite(longitude) && longitude >= -180 && longitude <= 180);
-            assertTrue(Double.isFinite(distance) && distance >= 0);
-            assertTrue(distance >= previous, "Distances must be ascending");
+            double latitude = number(store, "latitude").doubleValue();
+            double longitude = number(store, "longitude").doubleValue();
+            double distance = number(store, "distanceKm").doubleValue();
+            assertThat(latitude).isFinite().isBetween(-90.0, 90.0);
+            assertThat(longitude).isFinite().isBetween(-180.0, 180.0);
+            assertThat(distance).isFinite().isGreaterThanOrEqualTo(0);
+            assertThat(distance).as("Distances must be ascending").isGreaterThanOrEqualTo(previous);
             previous = distance;
         }
         List<Map<String, Object>> actualWarnings = response.jsonPath().getList("warnings");
-        assertEquals(warnings.length, actualWarnings.size());
-        assertEquals(Set.of(warnings), Set.copyOf(response.jsonPath().getList("warnings.code")));
+        assertThat(actualWarnings).hasSize(warnings.length);
+        assertThat(response.jsonPath().getList("warnings.code")).containsOnly(warnings);
         for (Map<String, Object> warning : actualWarnings) {
-            assertEquals(Set.of("code", "message"), warning.keySet());
-            assertInstanceOf(String.class, warning.get("code"));
-            assertFalse(assertInstanceOf(String.class, warning.get("message")).isBlank());
+            assertThat(warning).containsOnlyKeys("code", "message");
+            assertThat(warning.get("code")).isInstanceOf(String.class);
+            assertThat(warning.get("message")).isInstanceOf(String.class);
+            assertThat((String) warning.get("message")).isNotBlank();
         }
     }
 
     public static void assertFixtureOrder(Response response, int count) {
-        assertEquals(ORDERED_IDS.subList(0, count), response.jsonPath().getList("stores.id"));
+        assertThat(response.jsonPath().getList("stores.id")).isEqualTo(ORDERED_IDS.subList(0, count));
     }
 
     public static void assertBadParameter(Response response, String parameter) {
         response.then().statusCode(400).contentType("application/problem+json");
         Map<String, Object> body = response.jsonPath().getMap("$");
-        assertTrue(body.keySet().containsAll(Set.of("type", "title", "status", "detail", "instance")));
-        assertEquals("about:blank", body.get("type"));
-        assertEquals("Bad Request", body.get("title"));
-        assertEquals(400, body.get("status"));
-        assertEquals(PATH, body.get("instance"));
-        String detail = assertInstanceOf(String.class, body.get("detail"));
-        assertFalse(detail.isBlank());
-        assertTrue(detail.contains("'" + parameter + "'") || detail.toLowerCase().contains(parameter),
-                "Problem detail should identify the invalid parameter: " + detail);
-        assertFalse(body.containsKey("trace"));
-        assertFalse(body.containsKey("exception"));
+        assertThat(body).containsKeys("type", "title", "status", "detail", "instance");
+        assertThat(body.get("type")).isEqualTo("about:blank");
+        assertThat(body.get("title")).isEqualTo("Bad Request");
+        assertThat(body.get("status")).isEqualTo(400);
+        assertThat(body.get("instance")).isEqualTo(PATH);
+        assertThat(body.get("detail")).isInstanceOf(String.class);
+        String detail = (String) body.get("detail");
+        assertThat(detail).isNotBlank();
+        assertThat(detail.contains("'" + parameter + "'") || detail.toLowerCase().contains(parameter))
+                .as("Problem detail should identify the invalid parameter: %s", detail)
+                .isTrue();
+        assertThat(body).doesNotContainKeys("trace", "exception");
     }
 
     public static void assertBadCoordinates(Response response, String parameter) {
@@ -90,5 +88,10 @@ public final class HttpAssertions {
 
     public static void assertBadLimit(Response response) {
         assertBadParameter(response, "limit");
+    }
+
+    private static Number number(Map<String, Object> store, String field) {
+        assertThat(store.get(field)).as(field).isInstanceOf(Number.class);
+        return (Number) store.get(field);
     }
 }

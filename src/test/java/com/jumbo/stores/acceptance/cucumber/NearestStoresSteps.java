@@ -1,8 +1,8 @@
 package com.jumbo.stores.acceptance.cucumber;
 
 import static com.jumbo.stores.acceptance.HttpAssertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -48,7 +48,7 @@ public class NearestStoresSteps {
 
     @Then("{int} stores are returned without warnings")
     public void success(int count) {
-        assertNotNull(response);
+        assertThat(response).isNotNull();
         assertSuccess(response, count);
     }
 
@@ -69,12 +69,11 @@ public class NearestStoresSteps {
 
     @Then("the colocated stores {string} and {string} come first with zero distance")
     public void exactLocation(String first, String second) {
-        assertEquals(first, response.jsonPath().getString("stores[0].id"));
-        assertEquals(second, response.jsonPath().getString("stores[1].id"));
-        assertEquals(0, response.jsonPath().getDouble("stores[0].distanceKm"), 0);
-        assertEquals(0, response.jsonPath().getDouble("stores[1].distanceKm"), 0);
+        assertThat(response.jsonPath().getString("stores[0].id")).isEqualTo(first);
+        assertThat(response.jsonPath().getString("stores[1].id")).isEqualTo(second);
+        assertThat(response.jsonPath().getDouble("stores[0].distanceKm")).isCloseTo(0, within(0.0));
+        assertThat(response.jsonPath().getDouble("stores[1].distanceKm")).isCloseTo(0, within(0.0));
     }
-
 
     @Then("the response is a bad-limit problem")
     public void badLimit() {

@@ -1,7 +1,9 @@
 package com.jumbo.stores.domain;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.jumbo.stores.support.TestObjects;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,35 +16,35 @@ class DomainModelsTest {
     @Test
     void normalizesOptionalAddressParts() {
         var store = TestObjects.store().street2(null).street3(null).build();
-        assertEquals("", store.street2());
-        assertEquals("", store.street3());
+        assertThat(store.street2()).isEmpty();
+        assertThat(store.street3()).isEmpty();
     }
 
     @Test
     void rejectsInvalidStoreFields() {
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().id(" ").build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().addressName(null).build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().city("").build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().postalCode("\t").build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().street(null).build());
-        assertThrows(NullPointerException.class, () -> TestObjects.store().coordinates(null).build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().id(" ").build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().addressName(null).build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().city("").build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().postalCode("\t").build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().street(null).build());
+        assertThatNullPointerException().isThrownBy(() -> TestObjects.store().coordinates(null).build());
     }
 
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" ", "\t", "\r\n", "\u2003"})
     void domainProtectsEveryRequiredStoreFieldWithoutRepository(String value) {
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().id(value).build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().addressName(value).build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().city(value).build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().postalCode(value).build());
-        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().street(value).build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().id(value).build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().addressName(value).build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().city(value).build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().postalCode(value).build());
+        assertThatIllegalArgumentException().isThrownBy(() -> TestObjects.store().street(value).build());
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {-1, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void rejectsInvalidDistance(double distance) {
-        assertThrows(IllegalArgumentException.class,
+        assertThatIllegalArgumentException().isThrownBy(
                 () -> TestObjects.nearestStore().distanceKm(distance).build());
     }
 
@@ -53,17 +55,17 @@ class DomainModelsTest {
         var result = new SearchResult(stores, warnings);
         stores.clear();
         warnings.clear();
-        assertEquals(1, result.stores().size());
-        assertEquals(1, result.warnings().size());
-        assertThrows(UnsupportedOperationException.class, () -> result.stores().clear());
-        assertThrows(UnsupportedOperationException.class, () -> result.warnings().clear());
+        assertThat(result.stores()).hasSize(1);
+        assertThat(result.warnings()).hasSize(1);
+        assertThatThrownBy(() -> result.stores().clear()).isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> result.warnings().clear()).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
     void validatesWarningsAndNearestStore() {
-        assertThrows(NullPointerException.class, () -> new SearchWarning(null, "message"));
-        assertThrows(IllegalArgumentException.class, () -> new SearchWarning(WarningCode.OUTSIDE_SUPPORTED_AREA, null));
-        assertThrows(NullPointerException.class, () -> new NearestStore(null, 0));
-        assertEquals(0, TestObjects.nearestStore().distanceKm(0).build().distanceKm());
+        assertThatNullPointerException().isThrownBy(() -> new SearchWarning(null, "message"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new SearchWarning(WarningCode.OUTSIDE_SUPPORTED_AREA, null));
+        assertThatNullPointerException().isThrownBy(() -> new NearestStore(null, 0));
+        assertThat(TestObjects.nearestStore().distanceKm(0).build().distanceKm()).isZero();
     }
 }
