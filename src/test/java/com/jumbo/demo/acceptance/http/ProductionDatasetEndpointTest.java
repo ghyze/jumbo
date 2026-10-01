@@ -2,7 +2,7 @@ package com.jumbo.demo.acceptance.http;
 
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import com.jumbo.demo.DemoApplication;
+import com.jumbo.demo.NearestStoresApplication;
 import com.jumbo.demo.repository.StoreRepository;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
-@SpringBootTest(classes = DemoApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ProductionDatasetEndpointTest {
     @Autowired
     StoreRepository storeRepository;

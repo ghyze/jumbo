@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.jumbo</groupId>
-	<artifactId>demo</artifactId>
+	<artifactId>nearest-stores</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>nearest-stores</name>
+	<description>REST API returning the nearest Jumbo stores to a location</description>
 	<url/>
 	<licenses>
 		<license/>

@@ -2,7 +2,7 @@ package com.jumbo.demo.acceptance.http;
 
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.jumbo.demo.DemoApplication;
+import com.jumbo.demo.NearestStoresApplication;
 import com.jumbo.demo.acceptance.FixtureServer;
 import io.restassured.response.Response;
 import java.util.LinkedHashMap;
@@ -12,7 +12,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(classes = DemoApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "stores.search.max-results=10")
 class ConfiguredNearestStoresEndpointTest extends FixtureServer {
     @ParameterizedTest(name = "configured cap 10, limit={0}")

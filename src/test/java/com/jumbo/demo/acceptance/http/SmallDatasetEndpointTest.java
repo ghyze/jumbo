@@ -1,7 +1,7 @@
 package com.jumbo.demo.acceptance.http;
 
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
-import com.jumbo.demo.DemoApplication;
+import com.jumbo.demo.NearestStoresApplication;
 import com.jumbo.demo.repository.StoreRepository;
 import io.restassured.response.Response;
 import java.util.LinkedHashMap;
@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.bean.override.convention.TestBean;
 
-@SpringBootTest(classes = DemoApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SmallDatasetEndpointTest {
     @TestBean(name = "storeRepository", enforceOverride = true,
             methodName = "com.jumbo.demo.acceptance.FixtureRepositories#threeStores")

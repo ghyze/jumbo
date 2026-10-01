@@ -51,14 +51,14 @@ class ApiExceptionHandlerTest {
     @Test
     void coordinateBoundaryErrorsUseTheSameProblemShape() {
         assertProblem(handler.handleInvalidCoordinates(
-                new StoreRestAdapter.InvalidCoordinatesException(), request()), 400, "Bad Request");
+                new StoreController.InvalidCoordinatesException(), request()), 400, "Bad Request");
     }
 
     @Test
     void generatedParameterConstraintsAreInheritedAndReportedAsBadRequests() throws Exception {
         var properties = new SearchProperties(5);
-        var adapter = new StoreRestAdapter(new StoreService(List::of, properties, new HaversineDistance()), properties);
-        var method = StoreRestAdapter.class.getMethod("findNearestStores", Double.class, Double.class, String.class);
+        var adapter = new StoreController(new StoreService(List::of, properties, new HaversineDistance()), properties);
+        var method = StoreController.class.getMethod("findNearestStores", Double.class, Double.class, String.class);
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().forExecutables()
                     .validateParameters(adapter, method, new Object[] {91.0, 5.0, null});

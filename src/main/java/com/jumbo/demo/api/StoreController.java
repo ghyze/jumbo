@@ -14,11 +14,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class StoreRestAdapter implements StoresApi {
+public class StoreController implements StoresApi {
     private final StoreService service;
     private final LimitResolver limitResolver;
 
-    public StoreRestAdapter(StoreService service, SearchProperties properties) {
+    public StoreController(StoreService service, SearchProperties properties) {
         this.service = service;
         this.limitResolver = new LimitResolver(properties);
     }
@@ -29,7 +29,7 @@ public class StoreRestAdapter implements StoresApi {
         Coordinates coordinates = toCoordinates(latitude, longitude);
         var resolvedLimit = limitResolver.resolve(limit);
         var result = service.findNearest(coordinates, resolvedLimit.count());
-        var stores = result.stores().stream().map(StoreRestAdapter::toResponse).toList();
+        var stores = result.stores().stream().map(StoreController::toResponse).toList();
         var warnings = new ArrayList<ApiWarning>();
         if (resolvedLimit.defaulted()) {
             warnings.add(new ApiWarning("INVALID_LIMIT_DEFAULTED",

@@ -19,13 +19,13 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
-class StoreRestAdapterTest {
+class StoreControllerTest {
     @Test
     void mapsEveryFieldWithoutRoundingOrCombiningAddressComponents() {
         var store = TestObjects.store().id("distinct-id").addressName("Distinct address").city("Distinct city")
                 .postalCode("1234 AB").street("Distinct street").street2("42").street3("Rear entrance")
                 .coordinates(TestObjects.coordinates().latitude(51.234567).longitude(6.765432).build()).build();
-        var response = StoreRestAdapter.toResponse(TestObjects.nearestStore()
+        var response = StoreController.toResponse(TestObjects.nearestStore()
                 .store(store).distanceKm(12.3456789012345).build());
         assertAll(
                 () -> assertEquals("distinct-id", response.getId()),
@@ -44,7 +44,7 @@ class StoreRestAdapterTest {
     void preservesNormalizedOptionalAddressFields() {
         var nearest = TestObjects.nearestStore()
                 .store(TestObjects.store().street2(null).street3(null).build()).build();
-        var response = StoreRestAdapter.toResponse(nearest);
+        var response = StoreController.toResponse(nearest);
         assertEquals("", response.getStreet2());
         assertEquals("", response.getStreet3());
     }
@@ -82,7 +82,7 @@ class StoreRestAdapterTest {
         var service = new StoreService(() -> stores(2), properties, new HaversineDistance());
         var coordinates = TestObjects.coordinates().latitude(0).longitude(0).build();
         var serviceWarning = service.findNearest(coordinates, 5).warnings().getFirst();
-        var body = new StoreRestAdapter(service, properties).findNearestStores(0.0, 0.0, "bad").getBody();
+        var body = new StoreController(service, properties).findNearestStores(0.0, 0.0, "bad").getBody();
         assertNotNull(body);
         assertEquals(2, body.getStores().size());
         assertEquals(2, body.getWarnings().size());
@@ -103,16 +103,16 @@ class StoreRestAdapterTest {
     @CsvSource({"NaN, 5", "Infinity, 5", "-Infinity, 5", "91, 5", "-91, 5",
             "52, NaN", "52, Infinity", "52, -Infinity", "52, 181", "52, -181"})
     void domainCoordinateFailuresBecomeSpecificInputErrors(double latitude, double longitude) {
-        assertThrows(StoreRestAdapter.InvalidCoordinatesException.class,
+        assertThrows(StoreController.InvalidCoordinatesException.class,
                 () -> adapter(5, stores(1)).findNearestStores(latitude, longitude, null));
     }
 
     @Test
     void absentCoordinatesBecomeSpecificInputErrorsEvenWithoutMvcValidation() {
         var adapter = adapter(5, stores(1));
-        assertThrows(StoreRestAdapter.InvalidCoordinatesException.class,
+        assertThrows(StoreController.InvalidCoordinatesException.class,
                 () -> adapter.findNearestStores(null, 5.0, null));
-        assertThrows(StoreRestAdapter.InvalidCoordinatesException.class,
+        assertThrows(StoreController.InvalidCoordinatesException.class,
                 () -> adapter.findNearestStores(52.0, null, null));
     }
 
@@ -121,14 +121,14 @@ class StoreRestAdapterTest {
         var failure = new IllegalArgumentException("internal repository failure");
         var properties = new SearchProperties(5);
         var service = new StoreService(() -> { throw failure; }, properties, new HaversineDistance());
-        var adapter = new StoreRestAdapter(service, properties);
+        var adapter = new StoreController(service, properties);
         assertSame(failure, assertThrows(IllegalArgumentException.class,
                 () -> adapter.findNearestStores(52.0, 5.0, null)));
     }
 
-    private static StoreRestAdapter adapter(int maximum, List<Store> stores) {
+    private static StoreController adapter(int maximum, List<Store> stores) {
         var properties = new SearchProperties(maximum);
-        return new StoreRestAdapter(new StoreService(() -> stores, properties, new HaversineDistance()), properties);
+        return new StoreController(new StoreService(() -> stores, properties, new HaversineDistance()), properties);
     }
 
     private static List<Store> stores(int count) {

@@ -3,7 +3,7 @@ package com.jumbo.demo.acceptance.http;
 import static com.jumbo.demo.acceptance.HttpAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.jumbo.demo.DemoApplication;
+import com.jumbo.demo.NearestStoresApplication;
 import com.jumbo.demo.acceptance.FixtureServer;
 import io.restassured.response.Response;
 import java.util.LinkedHashMap;
@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(classes = DemoApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class NearestStoresEndpointTest extends FixtureServer {
     @Test
     void defaultFiveHaveEveryMappedFieldAndIndependentDistancesInTieBrokenOrder() {

@@ -24,9 +24,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String UNEXPECTED_ERROR =
             "An unexpected server error occurred. Please try again later.";
 
-    @ExceptionHandler(StoreRestAdapter.InvalidCoordinatesException.class)
+    @ExceptionHandler(StoreController.InvalidCoordinatesException.class)
     public ResponseEntity<Object> handleInvalidCoordinates(
-            StoreRestAdapter.InvalidCoordinatesException exception, WebRequest request) {
+            StoreController.InvalidCoordinatesException exception, WebRequest request) {
         return handleExceptionInternal(exception, null, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
