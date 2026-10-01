@@ -129,7 +129,7 @@ This full scan and sort is `O(n log n)` and deliberately simple for 587 stores. 
 
 ## With more time
 
-- Add request/response validation against the OpenAPI contract if the validator fits Spring Boot 4/Jackson 3 cleanly.
+- Validate HTTP test responses against the OpenAPI contract. A timeboxed spike with `swagger-request-validator-restassured` worked, but its request validation rejects the deliberately invalid requests, so it needs a response-only setup.
 - Introduce NullAway or package-level nullness only as a deliberate project-wide cleanup.
 - Benchmark a bounded heap or spatial index only if the dataset or traffic grows enough to justify the complexity.
 - Add CI for Windows and macOS verification.
