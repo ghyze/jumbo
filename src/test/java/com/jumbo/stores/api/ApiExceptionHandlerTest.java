@@ -1,6 +1,5 @@
 package com.jumbo.stores.api;
 
-import static com.jumbo.stores.util.StringUtil.isBlank;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -116,7 +115,7 @@ class ApiExceptionHandlerTest {
         assertEquals(URI.create("about:blank"), problem.getType());
         assertEquals(title, problem.getTitle());
         assertEquals(status, problem.getStatus());
-        assertFalse(isBlank(problem.getDetail()));
+        assertFalse(problem.getDetail() == null || problem.getDetail().isBlank());
         return problem;
     }
 }

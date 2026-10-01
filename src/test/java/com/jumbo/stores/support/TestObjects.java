@@ -2,11 +2,9 @@ package com.jumbo.stores.support;
 
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.domain.NearestStore;
-import com.jumbo.stores.domain.SearchResult;
 import com.jumbo.stores.domain.SearchWarning;
 import com.jumbo.stores.domain.Store;
 import com.jumbo.stores.domain.WarningCode;
-import java.util.List;
 
 public final class TestObjects {
     private TestObjects() {
@@ -30,7 +28,4 @@ public final class TestObjects {
         return SearchWarning.builder().code(WarningCode.OUTSIDE_SUPPORTED_AREA).message("Outside dataset coverage.");
     }
 
-    public static SearchResult.SearchResultBuilder searchResult() {
-        return SearchResult.builder().stores(List.of(nearestStore().build())).warnings(List.of());
-    }
 }

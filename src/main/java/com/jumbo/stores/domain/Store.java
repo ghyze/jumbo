@@ -1,6 +1,5 @@
 package com.jumbo.stores.domain;
 
-import static com.jumbo.stores.util.StringUtil.isBlank;
 import java.util.Objects;
 import lombok.Builder;
 
@@ -19,7 +18,7 @@ public record Store(String id, String addressName, String city, String postalCod
     }
 
     private static void requireText(String value, String field) {
-        if (isBlank(value)) {
+        if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
     }
