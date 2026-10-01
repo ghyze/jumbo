@@ -157,7 +157,7 @@ paths:
                     warnings:
                       - &coverageWarning
                         code: OUTSIDE_SUPPORTED_AREA
-                        message: The dataset covers the Netherlands; results may be far away.
+                        message: The dataset covers the Netherlands; this location is outside the approximate coverage area and results may be far away.
         '400':
           description: A required coordinate is missing, or a query parameter is invalid.
           content:
@@ -203,7 +203,7 @@ paths:
                 type: about:blank
                 title: Internal Server Error
                 status: 500
-                detail: An unexpected error occurred. Please try again later.
+                detail: An unexpected server error occurred. Please try again later.
                 instance: /api/stores/nearest
         default:
           description: Other HTTP errors use the same problem shape without internal details.
@@ -215,7 +215,7 @@ paths:
                 type: about:blank
                 title: Method Not Allowed
                 status: 405
-                detail: The requested HTTP method is not supported for this endpoint.
+                detail: The request could not be processed. Check the request URL, method, and accepted media types.
                 instance: /api/stores/nearest
 components:
   schemas:
