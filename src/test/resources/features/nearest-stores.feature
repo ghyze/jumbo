@@ -18,32 +18,24 @@ Feature: Find nearest stores from the JSON snapshot
     And the first <count> fixture stores are in nearest-first ID-tie order
 
     Examples:
-      | limit                                    | count |
-      | 3                                        | 3     |
-      | 20                                       | 5     |
-      | 9999999999999999999999999999999999999999 | 5     |
+      | limit | count |
+      | 3     | 3     |
+      | 20    | 5     |
 
-  Scenario Outline: Invalid supplied limits fall back rather than reject the search
+  Scenario Outline: Invalid supplied limits are rejected
     Given a requested limit of "<limit>"
     When the nearest stores are requested over HTTP
-    Then 5 stores are returned with warning "INVALID_LIMIT_DEFAULTED"
-    And the first 5 fixture stores are in nearest-first ID-tie order
+    Then the response is a bad-limit problem
 
     Examples:
       | limit |
       | many  |
-      |       |
+      | 0     |
 
   Scenario: A position outside coverage still finds stores
     Given a search position at latitude "0" and longitude "0"
     When the nearest stores are requested over HTTP
     Then 5 stores are returned with warning "OUTSIDE_SUPPORTED_AREA"
-
-  Scenario: Independent nonblocking warnings are combined
-    Given a search position at latitude "0" and longitude "0"
-    And a requested limit of "-1"
-    When the nearest stores are requested over HTTP
-    Then 5 stores are returned with warnings "INVALID_LIMIT_DEFAULTED" and "OUTSIDE_SUPPORTED_AREA"
 
   Scenario: Globally invalid coordinates are rejected instead of returning a coverage warning
     Given a search position at latitude "91" and longitude "5"

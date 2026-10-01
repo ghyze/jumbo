@@ -1,7 +1,6 @@
 package com.jumbo.stores.acceptance.http;
 
 import static com.jumbo.stores.acceptance.HttpAssertions.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jumbo.stores.NearestStoresApplication;
 import com.jumbo.stores.acceptance.FixtureServer;
 import io.restassured.response.Response;
@@ -17,7 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class ConfiguredNearestStoresEndpointTest extends FixtureServer {
     @ParameterizedTest(name = "configured cap 10, limit={0}")
     @MethodSource("limits")
-    void configuredCountControlsDefaultCapAndFallback(String limit, int count, boolean invalid) {
+    void configuredCountControlsDefaultAndCap(String limit, int count) {
         var query = new LinkedHashMap<String, String>();
         query.put("latitude", "52");
         query.put("longitude", "5");
@@ -25,18 +24,14 @@ class ConfiguredNearestStoresEndpointTest extends FixtureServer {
             query.put("limit", limit);
         }
         Response response = search(port, query);
-        assertSuccess(response, count, invalid ? new String[]{"INVALID_LIMIT_DEFAULTED"} : new String[0]);
+        assertSuccess(response, count);
         assertFixtureOrder(response, count);
-        if (invalid) {
-            assertTrue(response.jsonPath().getString("warnings[0].message").contains("10"));
-        }
     }
 
     static Stream<Arguments> limits() {
         return Stream.of(
-                Arguments.of(null, 10, false), Arguments.of("3", 3, false),
-                Arguments.of("10", 10, false), Arguments.of("20", 10, false),
-                Arguments.of("9".repeat(500), 10, false), Arguments.of("", 10, true),
-                Arguments.of("many", 10, true));
+                Arguments.of(null, 10), Arguments.of("3", 3),
+                Arguments.of("10", 10), Arguments.of("20", 10),
+                Arguments.of("", 10));
     }
 }

@@ -24,6 +24,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             "The request could not be processed. Check the request URL, method, and accepted media types.";
     private static final Map<String, String> INVALID_PARAMETER_DETAILS = Map.of(
             "latitude", "Query parameter 'latitude' must be a number between -90 and 90.",
+            "limit", "Query parameter 'limit' must be a positive integer.",
             "longitude", "Query parameter 'longitude' must be a number between -180 and 180.");
     private static final String UNEXPECTED_ERROR =
             "An unexpected server error occurred. Please try again later.";

@@ -65,31 +65,12 @@ class StoreControllerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"2, 2, 0", "20, 4, 0", "invalid, 4, 1", "0, 4, 1"})
-    void resolvesLimitsBeforeCallingRealService(String limit, int expectedCount, int expectedWarnings) {
-        var body = controller(4, stores(6)).findNearestStores(52.0907, 5.1214, limit).getBody();
+    @CsvSource({"2, 2", "20, 4"})
+    void delegatesExplicitLimitsToTheService(String limit, int expectedCount) {
+        var body = controller(4, stores(6)).findNearestStores(52.0907, 5.1214, Integer.valueOf(limit)).getBody();
         assertNotNull(body);
         assertEquals(expectedCount, body.getStores().size());
-        assertEquals(expectedWarnings, body.getWarnings().size());
-        if (expectedWarnings > 0) {
-            assertEquals("INVALID_LIMIT_DEFAULTED", body.getWarnings().getFirst().getCode());
-            assertTrue(body.getWarnings().getFirst().getMessage().contains("configured count of 4"));
-        }
-    }
-
-    @Test
-    void composesLimitAndServiceWarningsPreservingServiceCodeAndMessage() {
-        var properties = new SearchProperties(5);
-        var service = new StoreService(() -> stores(2), properties, new HaversineDistance());
-        var coordinates = TestObjects.coordinates().latitude(0).longitude(0).build();
-        var serviceWarning = service.findNearest(coordinates, 5).warnings().getFirst();
-        var body = new StoreController(service, properties).findNearestStores(0.0, 0.0, "bad").getBody();
-        assertNotNull(body);
-        assertEquals(2, body.getStores().size());
-        assertEquals(2, body.getWarnings().size());
-        assertEquals("INVALID_LIMIT_DEFAULTED", body.getWarnings().getFirst().getCode());
-        assertEquals(serviceWarning.code(), body.getWarnings().get(1).getCode());
-        assertEquals(serviceWarning.message(), body.getWarnings().get(1).getMessage());
+        assertTrue(body.getWarnings().isEmpty());
     }
 
     @Test
@@ -113,14 +94,14 @@ class StoreControllerTest {
         var failure = new IllegalArgumentException("internal repository failure");
         var properties = new SearchProperties(5);
         var service = new StoreService(() -> { throw failure; }, properties, new HaversineDistance());
-        var controller = new StoreController(service, properties);
+        var controller = new StoreController(service);
         assertSame(failure, assertThrows(IllegalArgumentException.class,
                 () -> controller.findNearestStores(52.0, 5.0, null)));
     }
 
     private static StoreController controller(int maximum, List<Store> stores) {
         var properties = new SearchProperties(maximum);
-        return new StoreController(new StoreService(() -> stores, properties, new HaversineDistance()), properties);
+        return new StoreController(new StoreService(() -> stores, properties, new HaversineDistance()));
     }
 
     private static List<Store> stores(int count) {

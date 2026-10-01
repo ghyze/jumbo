@@ -82,10 +82,11 @@ java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.search.max-results=1
 | --- | --- |
 | Omitted | Use the configured count |
 | Positive decimal integer below the cap | Use the requested count |
-| Above the cap, including very large integers | Use the configured count |
-| Blank, nonnumeric, fractional, zero, or negative | Use the configured count and include `INVALID_LIMIT_DEFAULTED` |
+| Above the cap within the 32-bit integer range | Use the configured count |
+| Blank | Behaves like an omitted limit |
+| Nonnumeric, fractional, zero, negative, or beyond the 32-bit integer range | Return `400 Bad Request` naming `limit` |
 
-Surrounding whitespace is trimmed. No request returns more stores than available. Invalid application configuration fails startup rather than quietly reverting to five. The cap bounds response size; it does not rate-limit requests or eliminate the full distance scan.
+No request returns more stores than available. Invalid application configuration fails startup rather than quietly reverting to five. The cap bounds response size; it does not rate-limit requests or eliminate the full distance scan.
 
 ### Distance algorithm
 
@@ -117,13 +118,13 @@ The supplied file has **587 stores**, all with Dutch-format postal codes and coo
 - Latitude: **50.7 to 53.6**, inclusive.
 - Longitude: **3.2 to 7.3**, inclusive.
 
-Globally valid coordinates outside this box still return `200` and nearest stores, with warning code `OUTSIDE_SUPPORTED_AREA`. The box is a coverage heuristic, not an exact national border or a guarantee that a store is nearby. For example, `(0, 0)` returns results with a warning, while latitude `91` is an error. Multiple warnings may occur together.
+Globally valid coordinates outside this box still return `200` and nearest stores, with warning code `OUTSIDE_SUPPORTED_AREA`. The box is a coverage heuristic, not an exact national border or a guarantee that a store is nearby. For example, `(0, 0)` returns results with a warning, while latitude `91` is an error. The coverage warning is the only current warning.
 
 The OpenAPI source is [`src/main/resources/openapi/stores.yaml`](src/main/resources/openapi/stores.yaml). Maven generates the REST interfaces and response models during `generate-sources`; generated Java lives under `target` and must not be edited or committed. There is no Swagger UI.
 
 ## Manual requests
 
-Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. They cover default/smaller/capped counts, invalid-limit fallback, a known store location, invalid coordinates, and coverage warnings. Embedded assertions check status and relevant response behavior.
+Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. They cover default/smaller/capped counts, invalid-limit errors, a known store location, invalid coordinates, and coverage warnings. Embedded assertions check status and relevant response behavior.
 
 The file assumes the default application cap of five. When changing the server configuration, update `configuredMax` at the top of the file too. `baseUrl` can be changed for a different port. The same HTTP file works on Windows and macOS.
 
@@ -166,7 +167,7 @@ Verified on Windows with JDK 27 on 30 September 2026:
 
 - `.\mvnw.cmd test` and `.\mvnw.cmd clean verify`: **324 JUnit/endpoint tests and 10 Cucumber scenarios passed**, with no failures, errors, or skips. The clean build regenerated the OpenAPI contract.
 - The executable JAR started from outside the checkout, loaded all 587 stores once, and reported healthy. Its packaged resources contain exactly one seed file and no assignment brief.
-- Real HTTP checks covered the default count, a configured cap of ten, smaller/capped/invalid limits, error responses, combined warnings, and an exact store location. Nearest-store IDs matched an independent full-dataset spherical-law-of-cosines calculation at four positions.
+- Real HTTP checks covered the default count, a configured cap of ten, smaller/capped limits, invalid-limit errors, error responses, coverage warnings, and an exact store location. Nearest-store IDs matched an independent full-dataset spherical-law-of-cosines calculation at four positions.
 - All 16 requests in `http/stores.http` were replayed against the packaged server, including its 33 embedded assertions, using a local Node harness. The IntelliJ client itself has not been exercised here.
 
 **macOS verification remains pending** on the available Mac. Run `./mvnw clean verify`, start the packaged JAR, and execute the HTTP requests there before submission. Windows results do not establish macOS verification.

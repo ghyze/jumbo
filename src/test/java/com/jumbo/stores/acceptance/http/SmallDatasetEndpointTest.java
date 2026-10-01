@@ -24,7 +24,7 @@ class SmallDatasetEndpointTest {
 
     @ParameterizedTest(name = "three available stores, limit={0}")
     @MethodSource("limits")
-    void returnsOnlyAvailableStores(String limit, int count, boolean invalid) {
+    void returnsOnlyAvailableStores(String limit, int count) {
         var query = new LinkedHashMap<String, String>();
         query.put("latitude", "52");
         query.put("longitude", "5");
@@ -32,12 +32,12 @@ class SmallDatasetEndpointTest {
             query.put("limit", limit);
         }
         Response response = search(port, query);
-        assertSuccess(response, count, invalid ? new String[]{"INVALID_LIMIT_DEFAULTED"} : new String[0]);
+        assertSuccess(response, count);
         assertFixtureOrder(response, count);
     }
 
     static Stream<Arguments> limits() {
-        return Stream.of(Arguments.of(null, 3, false), Arguments.of("2", 2, false),
-                Arguments.of("20", 3, false), Arguments.of("many", 3, true));
+        return Stream.of(Arguments.of(null, 3), Arguments.of("2", 2),
+                Arguments.of("20", 3), Arguments.of("", 3));
     }
 }

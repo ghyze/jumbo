@@ -75,6 +75,12 @@ public class NearestStoresSteps {
         assertEquals(0, response.jsonPath().getDouble("stores[1].distanceKm"), 0);
     }
 
+
+    @Then("the response is a bad-limit problem")
+    public void badLimit() {
+        assertBadLimit(response);
+    }
+
     @Then("the response is a bad-coordinate problem for {string}")
     public void badCoordinates(String parameter) {
         assertBadCoordinates(response, parameter);

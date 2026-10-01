@@ -28,17 +28,16 @@ paths:
         of opening hours, collection-point status, or location type.
 
         stores.search.max-results is both the default result count and the maximum;
-        it is five out of the box and can be configured at startup. Omitted limit
-        uses that count. Invalid supplied limit uses that count and adds
-        INVALID_LIMIT_DEFAULTED. A positive decimal integer smaller than the cap
-        reduces the count; larger values, even beyond machine integer range, cap
-        safely without warnings. Warnings can be combined and never change a
-        successful response's status. Small datasets may yield fewer results.
+        it is five out of the box and can be configured at startup. Omitted or
+        blank limit uses that count. A positive integer smaller than the cap
+        reduces the count; larger values are capped silently. Invalid supplied
+        limits return 400. Warnings never change a successful response's status.
+        Small datasets may yield fewer results.
 
         Examples below use an illustrative three-store dataset to keep responses
-        concise; the production dataset has more stores. Omitted, capped, and
-        invalid limits therefore return all three illustrative stores when the
-        configured count is five.
+        concise; the production dataset has more stores. Omitted and capped
+        limits therefore return all three illustrative stores when the configured
+        count is five.
       parameters:
         - name: latitude
           in: query
@@ -67,35 +66,23 @@ paths:
         - name: limit
           in: query
           required: false
-          allowEmptyValue: true
           description: |
-            Optional raw string. After trimming whitespace, decimal digits
-            representing a positive integer request at most that many stores.
-            Leading zeros are accepted. Values above stores.search.max-results
-            are capped, including arbitrarily long positive digit strings.
-            Omission uses the configured count (five out of the box). Blank,
-            nonnumeric, fractional, zero, negative, or otherwise malformed input
-            also uses the configured count, with INVALID_LIMIT_DEFAULTED rather
-            than a 400 error. There is intentionally no schema default or pattern:
-            runtime configuration and the forgiving parser determine behavior.
+            Optional positive integer result count. Omission uses the configured
+            count (five out of the box). An empty value is treated like omission.
+            Values above stores.search.max-results are capped silently.
+            Nonnumeric, fractional, zero, negative, or integer values beyond the
+            supported 32-bit range return 400.
           schema:
-            type: string
+            type: integer
+            format: int32
+            minimum: 1
           examples:
             lower:
               summary: Return at most two stores
-              value: '2'
+              value: 2
             capped:
               summary: Capped at the configured maximum
-              value: '20'
-            huge:
-              summary: Caps safely without integer overflow
-              value: '9999999999999999999999999999999999999999'
-            invalid:
-              summary: Use the configured count and warn
-              value: 'many'
-            blank:
-              summary: Empty supplied value also defaults with a warning
-              value: ''
+              value: 20
       responses:
         '200':
           description: Nearest stores and any non-blocking warnings.
@@ -152,14 +139,6 @@ paths:
                   value:
                     stores: [*firstStore, *secondStore, *thirdStore]
                     warnings: []
-                invalidLimit:
-                  summary: limit=many uses configured count and warns
-                  value:
-                    stores: [*firstStore, *secondStore, *thirdStore]
-                    warnings:
-                      - &invalidLimitWarning
-                        code: INVALID_LIMIT_DEFAULTED
-                        message: Invalid limit; using the configured maximum of 5 stores.
                 outsideCoverage:
                   summary: Valid position (0, 0), limit=1; non-blocking coverage warning
                   value:
@@ -179,13 +158,8 @@ paths:
                       - &coverageWarning
                         code: OUTSIDE_SUPPORTED_AREA
                         message: The dataset covers the Netherlands; results may be far away.
-                combinedWarnings:
-                  summary: Outside coverage and invalid limit; one available illustrative store
-                  value:
-                    stores: [*farStore]
-                    warnings: [*invalidLimitWarning, *coverageWarning]
         '400':
-          description: A required coordinate is missing or invalid.
+          description: A required coordinate is missing, or a query parameter is invalid.
           content:
             application/problem+json:
               schema:
@@ -211,6 +185,13 @@ paths:
                     title: Bad Request
                     status: 400
                     detail: Query parameter 'longitude' must be a number between -180 and 180.
+                    instance: /api/stores/nearest
+                invalidLimit:
+                  value:
+                    type: about:blank
+                    title: Bad Request
+                    status: 400
+                    detail: Query parameter 'limit' must be a positive integer.
                     instance: /api/stores/nearest
         '500':
           description: Unexpected server failure; diagnostic details are logged server-side.
@@ -252,7 +233,7 @@ components:
             $ref: '#/components/schemas/StoreResponse'
         warnings:
           type: array
-          description: Empty when neither coverage nor invalid-limit warnings apply.
+          description: Empty when the coverage warning does not apply.
           items:
             $ref: '#/components/schemas/ApiWarning'
     StoreResponse:
@@ -325,15 +306,12 @@ components:
       properties:
         code:
           type: string
-          description: |
-            Machine-readable warning code. Currently INVALID_LIMIT_DEFAULTED
-            (invalid supplied limit fell back to the configured count) or
-            OUTSIDE_SUPPORTED_AREA (query outside the approximate coverage box).
+          description: Machine-readable warning code.
           example: OUTSIDE_SUPPORTED_AREA
         message:
           type: string
           description: Human-readable explanation of the non-blocking warning.
-          example: The dataset covers the Netherlands; results may be far away.
+          example: The dataset covers the Netherlands; this location is outside the approximate coverage area and results may be far away.
     Problem:
       type: object
       description: RFC 9457 problem details without stack traces or implementation details.
@@ -356,7 +334,7 @@ components:
         detail:
           type: string
           description: Actionable description, safe to expose to callers.
-          example: Latitude must be finite and between -90 and 90.
+          example: Query parameter 'latitude' must be a number between -90 and 90.
         instance:
           type: string
           format: uri

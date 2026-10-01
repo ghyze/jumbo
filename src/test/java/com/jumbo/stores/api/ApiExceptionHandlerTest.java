@@ -57,8 +57,8 @@ class ApiExceptionHandlerTest {
     @Test
     void generatedParameterConstraintsAreInheritedAndReportedAsBadRequests() throws Exception {
         var properties = new SearchProperties(5);
-        var controller = new StoreController(new StoreService(List::of, properties, new HaversineDistance()), properties);
-        var method = StoreController.class.getMethod("findNearestStores", Double.class, Double.class, String.class);
+        var controller = new StoreController(new StoreService(List::of, properties, new HaversineDistance()));
+        var method = StoreController.class.getMethod("findNearestStores", Double.class, Double.class, Integer.class);
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().forExecutables()
                     .validateParameters(controller, method, new Object[] {91.0, 5.0, null});
@@ -66,6 +66,21 @@ class ApiExceptionHandlerTest {
             var problem = assertProblem(handler.handleConstraintViolation(
                     new ConstraintViolationException(violations), request()), 400, "Bad Request");
             assertEquals("Query parameter 'latitude' must be a number between -90 and 90.", problem.getDetail());
+        }
+    }
+
+    @Test
+    void generatedLimitConstraintsAreReportedAsBadRequests() throws Exception {
+        var properties = new SearchProperties(5);
+        var controller = new StoreController(new StoreService(List::of, properties, new HaversineDistance()));
+        var method = StoreController.class.getMethod("findNearestStores", Double.class, Double.class, Integer.class);
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            var violations = factory.getValidator().forExecutables()
+                    .validateParameters(controller, method, new Object[] {52.0, 5.0, 0});
+            assertFalse(violations.isEmpty());
+            var problem = assertProblem(handler.handleConstraintViolation(
+                    new ConstraintViolationException(violations), request()), 400, "Bad Request");
+            assertEquals("Query parameter 'limit' must be a positive integer.", problem.getDetail());
         }
     }
 

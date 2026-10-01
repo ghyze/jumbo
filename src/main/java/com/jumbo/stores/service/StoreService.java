@@ -18,6 +18,10 @@ public class StoreService {
     private final SearchProperties properties;
     private final DistanceCalculator distanceCalculator;
 
+    public SearchResult findNearest(Coordinates coordinates) {
+        return findNearest(coordinates, properties.maxResults());
+    }
+
     public SearchResult findNearest(Coordinates coordinates, int limit) {
         Objects.requireNonNull(coordinates, "coordinates");
         if (limit <= 0) {

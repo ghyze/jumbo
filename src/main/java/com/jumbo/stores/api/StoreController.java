@@ -4,11 +4,9 @@ import com.jumbo.stores.api.generated.StoresApi;
 import com.jumbo.stores.api.generated.model.ApiWarning;
 import com.jumbo.stores.api.generated.model.NearestStoresResponse;
 import com.jumbo.stores.api.generated.model.StoreResponse;
-import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.domain.NearestStore;
 import com.jumbo.stores.service.StoreService;
-import java.util.ArrayList;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,28 +14,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class StoreController implements StoresApi {
     private final StoreService service;
-    private final LimitResolver limitResolver;
 
-    public StoreController(StoreService service, SearchProperties properties) {
+    public StoreController(StoreService service) {
         this.service = service;
-        this.limitResolver = new LimitResolver(properties);
     }
 
     @Override
     public ResponseEntity<NearestStoresResponse> findNearestStores(
-            Double latitude, Double longitude, String limit) {
-        var resolvedLimit = limitResolver.resolve(limit);
-        var result = service.findNearest(new Coordinates(latitude, longitude), resolvedLimit.count());
+            Double latitude, Double longitude, Integer limit) {
+        var coordinates = new Coordinates(latitude, longitude);
+        var result = limit == null ? service.findNearest(coordinates) : service.findNearest(coordinates, limit);
         var stores = result.stores().stream().map(StoreController::toResponse).toList();
         var warnings = result.warnings().stream()
                 .map(warning -> new ApiWarning(warning.code(), warning.message()))
                 .toList();
-        if (resolvedLimit.defaulted()) {
-            warnings = new ArrayList<>(warnings);
-            warnings.addFirst(new ApiWarning("INVALID_LIMIT_DEFAULTED",
-                    "limit must be a positive decimal integer; the configured count of "
-                            + resolvedLimit.count() + " was used."));
-        }
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(new NearestStoresResponse(stores, warnings));
     }
