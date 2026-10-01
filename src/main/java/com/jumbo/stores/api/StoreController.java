@@ -34,8 +34,16 @@ public class StoreController implements StoresApi {
 
     static StoreResponse toResponse(NearestStore nearest) {
         var store = nearest.store();
-        return new StoreResponse(store.id(), store.addressName(), store.city(), store.postalCode(),
-                store.street(), store.street2(), store.street3(), store.coordinates().latitude(),
-                store.coordinates().longitude(), nearest.distanceKm());
+        return new StoreResponse()
+                .id(store.id())
+                .addressName(store.addressName())
+                .city(store.city())
+                .postalCode(store.postalCode())
+                .street(store.street())
+                .street2(store.street2())
+                .street3(store.street3())
+                .latitude(store.coordinates().latitude())
+                .longitude(store.coordinates().longitude())
+                .distanceKm(nearest.distanceKm());
     }
 }
