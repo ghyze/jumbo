@@ -150,7 +150,7 @@ Request -> handwritten REST adapter implementing generated StoresApi
 
 - A validated immutable `Coordinates` value object keeps latitude and longitude together.
 - `Store` owns required-text invariants, so its constructor and builder cannot create stores with null or blank required fields. `JsonStoreRepository` acts as an anti-corruption layer: it validates JSON structure and types, parses coordinate strings, detects duplicate IDs, and constructs domain objects. Domain validation failures retain resource, entry-index, and UUID context; blank-string rules are not duplicated in the repository.
-- The read-only repository resembles a database repository but eagerly reads the entire JSON file once during startup. Maven packages only `assignment/stores.json` from the assignment directory, keeping one maintained source copy. Updates require restart.
+- The read-only repository resembles a database repository but eagerly reads the entire JSON file once during startup. Maven packages only `src/main/resources/stores.json` as a standard classpath resource. Updates require restart.
 - Missing or malformed data, invalid required fields/coordinates, duplicate IDs, or an empty dataset fail startup. Unknown metadata is ignored; malformed stores are not silently skipped.
 - All seed entries participate regardless of opening hours, collection-point flags, or location type. Optional address components are normalized to empty strings.
 - The service computes all distances and sorts them: `O(n log n)` time and `O(n)` temporary space. This is deliberately simple for 587 stores.

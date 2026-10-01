@@ -2,7 +2,7 @@
 
 ## Goal and scope
 
-Implement a Java REST application that returns the closest Jumbo stores to a supplied latitude and longitude, using `assignment/stores.json` as its source data. Default to five results as required by the assignment, with a configurable result count.
+Implement a Java REST application that returns the closest Jumbo stores to a supplied latitude and longitude, using `src/main/resources/stores.json` as its classpath source data. Default to five results as required by the assignment, with a configurable result count.
 
 Keep the solution small, explainable, and easy to run. Retain the existing Java 27, Spring Boot 4.1.1, Maven Wrapper, and Lombok setup. Use an OpenAPI-first REST contract, JUnit unit tests, REST Assured endpoint tests, and Cucumber integration scenarios. The assignment's recommended 4-6 hours is context, not a delivery estimate or implementation time budget; AI-assisted work can differ substantially from conventional estimates.
 
@@ -91,7 +91,7 @@ If adopted later, keep MapStruct interfaces at the boundaries, use Spring compon
 
 - Provide a database-like read-only abstraction, initially `List<Store> findAll()`. Do not extend Spring Data interfaces or add unused CRUD methods: there is no database or write behavior.
 - Inspect and explicitly map the actual seed format: an object containing `stores` and unrelated `attributes` metadata, not a bare array. The current dataset has 587 entries, unique UUIDs, and coordinates encoded as strings.
-- Package the supplied JSON as a classpath resource using a narrowly scoped Maven resource entry that includes only `assignment/stores.json`. Keep the supplied file as the single maintained copy; do not depend on the launch working directory or create a second manually maintained copy.
+- Package the supplied JSON from the standard Maven resource location `src/main/resources/stores.json`. Keep the supplied file as the single maintained copy; do not depend on the launch working directory or create a second manually maintained copy.
 - Load the complete resource synchronously during bean initialization, parse coordinate strings into numeric domain values, and publish one immutable snapshot before serving requests.
 - Validate unique/nonblank IDs, required response fields, and finite/in-range coordinates. Ignore irrelevant seed fields and metadata, but do not silently drop malformed stores.
 - Proposed startup policy: a missing/unreadable resource, malformed document, empty dataset, duplicate ID, or invalid store fails startup with a clear error identifying the issue. A malformed deployment should not look like a healthy service with incomplete results.
