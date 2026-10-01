@@ -3,14 +3,12 @@ package com.jumbo.demo.service;
 import com.jumbo.demo.domain.Coordinates;
 import java.util.Objects;
 
-public final class HaversineDistance {
+public final class HaversineDistance implements DistanceCalculator {
     /** IUGG mean Earth radius in kilometres; distances are great-circle, not road distances. */
     public static final double EARTH_RADIUS_KM = 6371.0088;
 
-    private HaversineDistance() {
-    }
-
-    public static double between(Coordinates from, Coordinates to) {
+    @Override
+    public double between(Coordinates from, Coordinates to) {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(to, "to");
         double latitudeDelta = Math.toRadians(to.latitude() - from.latitude());

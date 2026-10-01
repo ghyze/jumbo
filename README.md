@@ -87,6 +87,29 @@ java -jar target\demo-0.0.1-SNAPSHOT.jar --stores.search.max-results=10
 
 Surrounding whitespace is trimmed. No request returns more stores than available. Invalid application configuration fails startup rather than quietly reverting to five. The cap bounds response size; it does not rate-limit requests or eliminate the full distance scan.
 
+### Distance algorithm
+
+`StoreService` receives a `DistanceCalculator` through constructor injection. Its `between` method
+returns a finite, nonnegative distance in kilometres. `HaversineDistance` is the default implementation;
+the calculation and result ordering are unchanged.
+
+Spring Boot selects the implementation at startup through `stores.distance.algorithm`. For example:
+
+```powershell
+java -jar target\demo-0.0.1-SNAPSHOT.jar --stores.distance.algorithm=haversine
+```
+
+The same setting can be supplied in application YAML or through the environment variable
+`STORES_DISTANCE_ALGORITHM`. Omitting it selects Haversine; an unknown or blank value fails startup
+rather than silently falling back.
+
+To add an algorithm, implement `DistanceCalculator` and register a `@Bean` with
+`@ConditionalOnProperty(prefix = "stores.distance", name = "algorithm", havingValue = "your-algorithm")`,
+following the Haversine bean in `StoreConfiguration`. Reserve `matchIfMissing = true` for Haversine.
+Both implementations can be packaged together, with exactly one enabled by the deployment setting.
+Only Haversine is currently provided; switching requires the alternative implementation to be included
+in the application and a restart, not a change to `StoreService`.
+
 ### Coverage warnings
 
 The supplied file has **587 stores**, all with Dutch-format postal codes and coordinates within the approximate European Netherlands coverage box:
@@ -126,6 +149,7 @@ Request -> handwritten REST adapter implementing generated StoresApi
 ```
 
 - A validated immutable `Coordinates` value object keeps latitude and longitude together.
+- `Store` owns required-text invariants, so its constructor and builder cannot create stores with null or blank required fields. `JsonStoreRepository` acts as an anti-corruption layer: it validates JSON structure and types, parses coordinate strings, detects duplicate IDs, and constructs domain objects. Domain validation failures retain resource, entry-index, and UUID context; blank-string rules are not duplicated in the repository.
 - The read-only repository resembles a database repository but eagerly reads the entire JSON file once during startup. Maven packages only `assignment/stores.json` from the assignment directory, keeping one maintained source copy. Updates require restart.
 - Missing or malformed data, invalid required fields/coordinates, duplicate IDs, or an empty dataset fail startup. Unknown metadata is ignored; malformed stores are not silently skipped.
 - All seed entries participate regardless of opening hours, collection-point flags, or location type. Optional address components are normalized to empty strings.

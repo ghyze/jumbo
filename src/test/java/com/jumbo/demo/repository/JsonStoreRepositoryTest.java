@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.core.io.AbstractResource;
@@ -91,6 +92,45 @@ class JsonStoreRepositoryTest {
         assertEquals(1, resource.reads);
         assertThrows(UnsupportedOperationException.class, snapshot::clear);
         assertThrows(UnsupportedOperationException.class, () -> snapshot.add(snapshot.getFirst()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{", "{}", "{\"stores\":[null]}", "{\"stores\":[{\"uuid\":\"broken\"}]}"})
+    void closesResourceWhenParsingOrValidationFails(String json) {
+        var resource = new CountingResource(json);
+
+        assertThrows(IllegalStateException.class, () -> new JsonStoreRepository(resource));
+
+        assertEquals(1, resource.reads);
+        assertTrue(resource.closes >= 1);
+    }
+
+    @Test
+    void invalidStoreRetainsResourceIndexIdAndOriginalCause() {
+        String invalid = STORE.replace("seed-a", "seed-b").replace("\"city\":\"Utrecht\"", "\"city\":null");
+
+        var failure = assertThrows(IllegalStateException.class,
+                () -> repository(document(STORE + "," + invalid)));
+
+        assertEquals("Failed to load stores from Byte array resource [fixture]: "
+                + "stores[1] (uuid 'seed-b'): city must be a string", failure.getMessage());
+        assertEquals("city must be a string", failure.getCause().getCause().getMessage());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"uuid,seed-a,id", "addressName,Jumbo Distinct Name,addressName",
+            "city,Utrecht,city", "postalCode,3511 AB,postalCode", "street,Voorstraat,street"})
+    void domainRejectsBlankStoreFieldsWithRepositoryContext(String jsonField, String original, String domainField) {
+        String invalid = STORE.replace("\"" + jsonField + "\":\"" + original + "\"",
+                "\"" + jsonField + "\":\" \"");
+
+        var failure = assertThrows(IllegalStateException.class, () -> repository(document(invalid)));
+
+        String id = jsonField.equals("uuid") ? " " : "seed-a";
+        String domainMessage = domainField + " must not be blank";
+        assertEquals("Failed to load stores from Byte array resource [fixture]: "
+                + "stores[0] (uuid '" + id + "'): " + domainMessage, failure.getMessage());
+        assertEquals(domainMessage, failure.getCause().getCause().getMessage());
     }
 
     @ParameterizedTest

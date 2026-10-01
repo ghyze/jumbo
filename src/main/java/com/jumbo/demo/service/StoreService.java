@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 public class StoreService {
     private final StoreRepository repository;
     private final SearchProperties properties;
+    private final DistanceCalculator distanceCalculator;
 
     public SearchResult findNearest(Coordinates coordinates, int limit) {
         Objects.requireNonNull(coordinates, "coordinates");
@@ -24,7 +25,7 @@ public class StoreService {
             throw new IllegalArgumentException("limit must be positive");
         }
         var nearest = repository.findAll().stream()
-                .map(store -> new NearestStore(store, HaversineDistance.between(coordinates, store.coordinates())))
+                .map(store -> new NearestStore(store, distanceCalculator.between(coordinates, store.coordinates())))
                 .sorted(Comparator.comparingDouble(NearestStore::distanceKm)
                         .thenComparing(result -> result.store().id()))
                 .limit(Math.min(limit, properties.maxResults()))

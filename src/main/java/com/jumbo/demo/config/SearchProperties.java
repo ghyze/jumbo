@@ -1,5 +1,7 @@
 package com.jumbo.demo.config;
 
+import static com.jumbo.demo.util.StringUtil.isBlank;
+
 import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
@@ -30,7 +32,7 @@ public final class SearchProperties {
 
     private static int parseMaxResults(String value) {
         // Bind as text so an explicitly blank value cannot silently use the default.
-        if (value == null || !value.matches("[0-9]+")) {
+        if (isBlank(value) || !value.matches("[0-9]+")) {
             throw new IllegalArgumentException("stores.search.max-results must be a positive Java integer");
         }
         try {

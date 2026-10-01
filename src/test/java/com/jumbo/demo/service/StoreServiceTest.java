@@ -27,7 +27,7 @@ class StoreServiceTest {
         var closest = store("closest", 0, 0);
         var tieA = store("a", 0, 1);
         var snapshot = new ArrayList<>(List.of(far, tieB, closest, tieA));
-        var service = new StoreService(() -> snapshot, new SearchProperties(5));
+        var service = new StoreService(() -> snapshot, new SearchProperties(5), new HaversineDistance());
 
         var result = service.findNearest(new Coordinates(0, 0), 5);
 
@@ -38,6 +38,25 @@ class StoreServiceTest {
         assertEquals(222.3901604670658, result.stores().getLast().distanceKm(), 1e-9);
         assertEquals(List.of(far, tieB, closest, tieA), snapshot);
         assertThrows(UnsupportedOperationException.class, () -> result.stores().clear());
+    }
+
+    @Test
+    void usesInjectedCalculatorForDistancesAndRanking() {
+        var origin = new Coordinates(0, 0);
+        var near = store("near", 0, 1);
+        var far = store("far", 0, 2);
+        DistanceCalculator calculator = (from, to) -> {
+            assertEquals(origin, from);
+            return to.equals(far.coordinates()) ? 10 : 20;
+        };
+        var service = new StoreService(() -> List.of(near, far), new SearchProperties(5), calculator);
+
+        var result = service.findNearest(origin, 5);
+
+        assertEquals(List.of("far", "near"),
+                result.stores().stream().map(nearest -> nearest.store().id()).toList());
+        assertEquals(List.of(10.0, 20.0),
+                result.stores().stream().map(nearest -> nearest.distanceKm()).toList());
     }
 
     @ParameterizedTest
@@ -122,7 +141,7 @@ class StoreServiceTest {
     private static StoreService service(List<Store> stores, int cap) {
         List<Store> snapshot = List.copyOf(stores);
         StoreRepository repository = () -> snapshot;
-        return new StoreService(repository, new SearchProperties(cap));
+        return new StoreService(repository, new SearchProperties(cap), new HaversineDistance());
     }
 
     private static Store store(String id, double latitude, double longitude) {

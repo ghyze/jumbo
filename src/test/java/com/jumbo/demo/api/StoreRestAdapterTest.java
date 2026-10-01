@@ -2,6 +2,7 @@ package com.jumbo.demo.api;
 
 import com.jumbo.demo.config.SearchProperties;
 import com.jumbo.demo.domain.Store;
+import com.jumbo.demo.service.HaversineDistance;
 import com.jumbo.demo.service.StoreService;
 import com.jumbo.demo.support.TestObjects;
 import java.util.List;
@@ -79,7 +80,7 @@ class StoreRestAdapterTest {
     @Test
     void composesLimitAndServiceWarningsPreservingServiceCodeAndMessage() {
         var properties = new SearchProperties(5);
-        var service = new StoreService(() -> stores(2), properties);
+        var service = new StoreService(() -> stores(2), properties, new HaversineDistance());
         var coordinates = TestObjects.coordinates().latitude(0).longitude(0).build();
         var serviceWarning = service.findNearest(coordinates, 5).warnings().getFirst();
         var body = new StoreRestAdapter(service, properties).findNearestStores(0.0, 0.0, "bad").getBody();
@@ -120,7 +121,7 @@ class StoreRestAdapterTest {
     void unrelatedIllegalArgumentsRemainServerFailures() {
         var failure = new IllegalArgumentException("internal repository failure");
         var properties = new SearchProperties(5);
-        var service = new StoreService(() -> { throw failure; }, properties);
+        var service = new StoreService(() -> { throw failure; }, properties, new HaversineDistance());
         var adapter = new StoreRestAdapter(service, properties);
         assertSame(failure, assertThrows(IllegalArgumentException.class,
                 () -> adapter.findNearestStores(52.0, 5.0, null)));
@@ -128,7 +129,7 @@ class StoreRestAdapterTest {
 
     private static StoreRestAdapter adapter(int maximum, List<Store> stores) {
         var properties = new SearchProperties(maximum);
-        return new StoreRestAdapter(new StoreService(() -> stores, properties), properties);
+        return new StoreRestAdapter(new StoreService(() -> stores, properties, new HaversineDistance()), properties);
     }
 
     private static List<Store> stores(int count) {

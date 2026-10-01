@@ -1,11 +1,13 @@
 package com.jumbo.demo.api;
 
+import static com.jumbo.demo.util.StringUtil.isBlank;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jumbo.demo.config.SearchProperties;
+import com.jumbo.demo.service.HaversineDistance;
 import com.jumbo.demo.service.StoreService;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
@@ -56,7 +58,7 @@ class ApiExceptionHandlerTest {
     @Test
     void generatedParameterConstraintsAreInheritedAndReportedAsBadRequests() throws Exception {
         var properties = new SearchProperties(5);
-        var adapter = new StoreRestAdapter(new StoreService(List::of, properties), properties);
+        var adapter = new StoreRestAdapter(new StoreService(List::of, properties, new HaversineDistance()), properties);
         var method = StoreRestAdapter.class.getMethod("findNearestStores", Double.class, Double.class, String.class);
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().forExecutables()
@@ -109,7 +111,7 @@ class ApiExceptionHandlerTest {
         assertEquals(URI.create("about:blank"), problem.getType());
         assertEquals(title, problem.getTitle());
         assertEquals(status, problem.getStatus());
-        assertTrue(problem.getDetail() != null && !problem.getDetail().isBlank());
+        assertFalse(isBlank(problem.getDetail()));
         assertEquals(URI.create("/api/stores/nearest"), problem.getInstance());
         return problem;
     }

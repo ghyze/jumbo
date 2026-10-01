@@ -3,6 +3,8 @@ package com.jumbo.demo.api;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ElementKind;
 import java.net.URI;
+
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -54,15 +56,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(
             Exception exception, Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        String detail;
-        if (status.is5xxServerError()) {
-            logger.error("Unexpected failure while handling an HTTP request", exception);
-            detail = UNEXPECTED_ERROR;
-        } else if (status.value() == HttpStatus.BAD_REQUEST.value()) {
-            detail = INVALID_COORDINATES;
-        } else {
-            detail = "The request could not be processed. Check the request URL, method, and accepted media types.";
-        }
+        final var detail = getDetail(exception, status);
         var problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create("about:blank"));
         var httpStatus = HttpStatus.resolve(status.value());
@@ -73,5 +67,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         responseHeaders.putAll(headers);
         responseHeaders.setContentType(MediaType.APPLICATION_PROBLEM_JSON);
         return super.handleExceptionInternal(exception, problem, responseHeaders, status, request);
+    }
+
+    private @NonNull String getDetail(Exception exception, HttpStatusCode status) {
+        if (status.is5xxServerError()) {
+            logger.error("Unexpected failure while handling an HTTP request", exception);
+            return UNEXPECTED_ERROR;
+        } else if (status.value() == HttpStatus.BAD_REQUEST.value()) {
+            return INVALID_COORDINATES;
+        } else {
+            return "The request could not be processed. Check the request URL, method, and accepted media types.";
+        }
     }
 }

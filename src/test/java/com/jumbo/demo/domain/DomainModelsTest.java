@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class DomainModelsTest {
@@ -26,6 +27,17 @@ class DomainModelsTest {
         assertThrows(IllegalArgumentException.class, () -> TestObjects.store().postalCode("\t").build());
         assertThrows(IllegalArgumentException.class, () -> TestObjects.store().street(null).build());
         assertThrows(NullPointerException.class, () -> TestObjects.store().coordinates(null).build());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\t", "\r\n", "\u2003"})
+    void domainProtectsEveryRequiredStoreFieldWithoutRepository(String value) {
+        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().id(value).build());
+        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().addressName(value).build());
+        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().city(value).build());
+        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().postalCode(value).build());
+        assertThrows(IllegalArgumentException.class, () -> TestObjects.store().street(value).build());
     }
 
     @ParameterizedTest
