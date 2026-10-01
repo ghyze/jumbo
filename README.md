@@ -91,6 +91,8 @@ Surrounding whitespace is trimmed. No request returns more stores than available
 
 By default, the application loads `classpath:stores.json`. To swap the dataset at startup, pass a
 Spring resource location such as `--stores.data.location=file:C:\data\stores.json`.
+The JSON loader uses Jackson data binding with default coercion: unknown fields are ignored, numbers
+and booleans in text fields become strings, and objects or arrays in text fields fail startup.
 
 ### Distance algorithm
 
