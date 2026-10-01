@@ -1,9 +1,6 @@
 package com.jumbo.stores.api;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import com.jumbo.stores.domain.InvalidCoordinatesException;
 import com.jumbo.stores.service.HaversineDistance;
 import com.jumbo.stores.service.SearchProperties;
@@ -32,7 +29,7 @@ class ApiExceptionHandlerTest {
         var response = handler.handleException(
                 new MissingServletRequestParameterException("latitude", "Double"), request());
         var problem = assertProblem(response, 400, "Bad Request");
-        assertEquals("Required query parameter 'latitude' is missing.", problem.getDetail());
+        assertThat(problem.getDetail()).isEqualTo("Required query parameter 'latitude' is missing.");
     }
 
     @Test
@@ -41,16 +38,16 @@ class ApiExceptionHandlerTest {
                 "sensitive-input", Double.class, "longitude", (MethodParameter) null,
                 new IllegalArgumentException("internal-converter-detail")), request());
         var problem = assertProblem(response, 400, "Bad Request");
-        assertEquals("Query parameter 'longitude' must be a number between -180 and 180.", problem.getDetail());
-        assertFalse(problem.getDetail().contains("sensitive-input"));
-        assertFalse(problem.getDetail().contains("internal-converter-detail"));
+        assertThat(problem.getDetail())
+                .isEqualTo("Query parameter 'longitude' must be a number between -180 and 180.")
+                .doesNotContain("sensitive-input", "internal-converter-detail");
     }
 
     @Test
     void coordinateBoundaryErrorsNameTheInvalidParameter() {
         var problem = assertProblem(handler.handleInvalidCoordinates(
                 new InvalidCoordinatesException("latitude", 90), request()), 400, "Bad Request");
-        assertEquals("Query parameter 'latitude' must be a number between -90 and 90.", problem.getDetail());
+        assertThat(problem.getDetail()).isEqualTo("Query parameter 'latitude' must be a number between -90 and 90.");
     }
 
     @Test
@@ -61,10 +58,10 @@ class ApiExceptionHandlerTest {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().forExecutables()
                     .validateParameters(controller, method, new Object[] {91.0, 5.0, null});
-            assertFalse(violations.isEmpty());
+            assertThat(violations).isNotEmpty();
             var problem = assertProblem(handler.handleConstraintViolation(
                     new ConstraintViolationException(violations), request()), 400, "Bad Request");
-            assertEquals("Query parameter 'latitude' must be a number between -90 and 90.", problem.getDetail());
+            assertThat(problem.getDetail()).isEqualTo("Query parameter 'latitude' must be a number between -90 and 90.");
         }
     }
 
@@ -76,10 +73,10 @@ class ApiExceptionHandlerTest {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().forExecutables()
                     .validateParameters(controller, method, new Object[] {52.0, 5.0, 0});
-            assertFalse(violations.isEmpty());
+            assertThat(violations).isNotEmpty();
             var problem = assertProblem(handler.handleConstraintViolation(
                     new ConstraintViolationException(violations), request()), 400, "Bad Request");
-            assertEquals("Query parameter 'limit' must be a positive integer.", problem.getDetail());
+            assertThat(problem.getDetail()).isEqualTo("Query parameter 'limit' must be a positive integer.");
         }
     }
 
@@ -88,8 +85,7 @@ class ApiExceptionHandlerTest {
         var problem = assertProblem(handler.handleUnexpected(
                 new IllegalArgumentException("internal-repository-detail"), request()),
                 500, "Internal Server Error");
-        assertTrue(problem.getDetail().contains("try again"));
-        assertFalse(problem.getDetail().contains("internal-repository-detail"));
+        assertThat(problem.getDetail()).contains("try again").doesNotContain("internal-repository-detail");
     }
 
     @Test
@@ -97,9 +93,9 @@ class ApiExceptionHandlerTest {
         var response = handler.handleException(
                 new HttpRequestMethodNotSupportedException("POST", List.of("GET")), request());
         var problem = assertProblem(response, 405, "Method Not Allowed");
-        assertEquals("The request could not be processed. Check the request URL, method, and accepted media types.",
-                problem.getDetail());
-        assertTrue(response.getHeaders().getAllow().contains(HttpMethod.GET));
+        assertThat(problem.getDetail()).isEqualTo(
+                "The request could not be processed. Check the request URL, method, and accepted media types.");
+        assertThat(response.getHeaders().getAllow()).contains(HttpMethod.GET);
     }
 
     private static ServletWebRequest request() {
@@ -109,13 +105,14 @@ class ApiExceptionHandlerTest {
     }
 
     private static ProblemDetail assertProblem(ResponseEntity<Object> response, int status, String title) {
-        assertEquals(status, response.getStatusCode().value());
-        assertEquals(MediaType.APPLICATION_PROBLEM_JSON, response.getHeaders().getContentType());
-        var problem = assertInstanceOf(ProblemDetail.class, response.getBody());
-        assertEquals(URI.create("about:blank"), problem.getType());
-        assertEquals(title, problem.getTitle());
-        assertEquals(status, problem.getStatus());
-        assertFalse(problem.getDetail() == null || problem.getDetail().isBlank());
+        assertThat(response.getStatusCode().value()).isEqualTo(status);
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(response.getBody()).isInstanceOf(ProblemDetail.class);
+        var problem = (ProblemDetail) response.getBody();
+        assertThat(problem.getType()).isEqualTo(URI.create("about:blank"));
+        assertThat(problem.getTitle()).isEqualTo(title);
+        assertThat(problem.getStatus()).isEqualTo(status);
+        assertThat(problem.getDetail()).isNotBlank();
         return problem;
     }
 }

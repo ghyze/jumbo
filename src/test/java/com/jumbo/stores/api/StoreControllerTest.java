@@ -1,15 +1,13 @@
 package com.jumbo.stores.api;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.jumbo.stores.service.SearchProperties;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.jumbo.stores.api.generated.model.StoreResponse;
 import com.jumbo.stores.domain.InvalidCoordinatesException;
 import com.jumbo.stores.domain.Store;
 import com.jumbo.stores.service.HaversineDistance;
+import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.service.StoreService;
 import com.jumbo.stores.support.TestObjects;
 import java.util.List;
@@ -28,17 +26,17 @@ class StoreControllerTest {
                 .coordinates(TestObjects.coordinates().latitude(51.234567).longitude(6.765432).build()).build();
         var response = StoreController.toResponse(TestObjects.nearestStore()
                 .store(store).distanceKm(12.3456789012345).build());
-        assertAll(
-                () -> assertEquals("distinct-id", response.getId()),
-                () -> assertEquals("Distinct address", response.getAddressName()),
-                () -> assertEquals("Distinct city", response.getCity()),
-                () -> assertEquals("1234 AB", response.getPostalCode()),
-                () -> assertEquals("Distinct street", response.getStreet()),
-                () -> assertEquals("42", response.getStreet2()),
-                () -> assertEquals("Rear entrance", response.getStreet3()),
-                () -> assertEquals(51.234567, response.getLatitude()),
-                () -> assertEquals(6.765432, response.getLongitude()),
-                () -> assertEquals(12.3456789012345, response.getDistanceKm()));
+        assertThat(response)
+                .returns("distinct-id", StoreResponse::getId)
+                .returns("Distinct address", StoreResponse::getAddressName)
+                .returns("Distinct city", StoreResponse::getCity)
+                .returns("1234 AB", StoreResponse::getPostalCode)
+                .returns("Distinct street", StoreResponse::getStreet)
+                .returns("42", StoreResponse::getStreet2)
+                .returns("Rear entrance", StoreResponse::getStreet3)
+                .returns(51.234567, StoreResponse::getLatitude)
+                .returns(6.765432, StoreResponse::getLongitude)
+                .returns(12.3456789012345, StoreResponse::getDistanceKm);
     }
 
     @Test
@@ -46,47 +44,46 @@ class StoreControllerTest {
         var nearest = TestObjects.nearestStore()
                 .store(TestObjects.store().street2(null).street3(null).build()).build();
         var response = StoreController.toResponse(nearest);
-        assertEquals("", response.getStreet2());
-        assertEquals("", response.getStreet3());
+        assertThat(response.getStreet2()).isEmpty();
+        assertThat(response.getStreet3()).isEmpty();
     }
 
     @Test
     void returnsJsonWithConfiguredDefaultAndServiceOrdering() {
         var controller = controller(3, stores(5));
         var response = controller.findNearestStores(52.0907, 5.1214, null);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
         var body = response.getBody();
-        assertNotNull(body);
-        assertEquals(List.of("store-0", "store-1", "store-2"),
-                body.getStores().stream().map(store -> store.getId()).toList());
-        assertTrue(body.getWarnings().isEmpty());
-        assertEquals(0.0, body.getStores().getFirst().getDistanceKm());
+        assertThat(body).isNotNull();
+        assertThat(body.getStores().stream().map(store -> store.getId())).containsExactly("store-0", "store-1", "store-2");
+        assertThat(body.getWarnings()).isEmpty();
+        assertThat(body.getStores().getFirst().getDistanceKm()).isZero();
     }
 
     @ParameterizedTest
     @CsvSource({"2, 2", "20, 4"})
     void delegatesExplicitLimitsToTheService(String limit, int expectedCount) {
         var body = controller(4, stores(6)).findNearestStores(52.0907, 5.1214, Integer.valueOf(limit)).getBody();
-        assertNotNull(body);
-        assertEquals(expectedCount, body.getStores().size());
-        assertTrue(body.getWarnings().isEmpty());
+        assertThat(body).isNotNull();
+        assertThat(body.getStores()).hasSize(expectedCount);
+        assertThat(body.getWarnings()).isEmpty();
     }
 
     @Test
     void emptyRepositoryReturnsEmptyArrays() {
         var body = controller(5, List.of()).findNearestStores(52.0, 5.0, null).getBody();
-        assertNotNull(body);
-        assertTrue(body.getStores().isEmpty());
-        assertTrue(body.getWarnings().isEmpty());
+        assertThat(body).isNotNull();
+        assertThat(body.getStores()).isEmpty();
+        assertThat(body.getWarnings()).isEmpty();
     }
 
     @ParameterizedTest
     @CsvSource({"NaN, 5", "Infinity, 5", "-Infinity, 5", "91, 5", "-91, 5",
             "52, NaN", "52, Infinity", "52, -Infinity", "52, 181", "52, -181"})
     void domainCoordinateFailuresBecomeSpecificInputErrors(double latitude, double longitude) {
-        assertThrows(InvalidCoordinatesException.class,
-                () -> controller(5, stores(1)).findNearestStores(latitude, longitude, null));
+        assertThatThrownBy(() -> controller(5, stores(1)).findNearestStores(latitude, longitude, null))
+                .isInstanceOf(InvalidCoordinatesException.class);
     }
 
     @Test
@@ -95,8 +92,8 @@ class StoreControllerTest {
         var properties = new SearchProperties(5);
         var service = new StoreService(() -> { throw failure; }, properties, new HaversineDistance());
         var controller = new StoreController(service);
-        assertSame(failure, assertThrows(IllegalArgumentException.class,
-                () -> controller.findNearestStores(52.0, 5.0, null)));
+        assertThatIllegalArgumentException().isThrownBy(() -> controller.findNearestStores(52.0, 5.0, null))
+                .isSameAs(failure);
     }
 
     private static StoreController controller(int maximum, List<Store> stores) {

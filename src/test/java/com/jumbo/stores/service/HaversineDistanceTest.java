@@ -1,8 +1,8 @@
 package com.jumbo.stores.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.within;
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.support.TestObjects;
 import org.junit.jupiter.api.Test;
@@ -15,14 +15,14 @@ class HaversineDistanceTest {
     @Test
     void rejectsNullCoordinates() {
         var point = TestObjects.coordinates().build();
-        assertThrows(NullPointerException.class, () -> calculator.between(null, point));
-        assertThrows(NullPointerException.class, () -> calculator.between(point, null));
+        assertThatNullPointerException().isThrownBy(() -> calculator.between(null, point));
+        assertThatNullPointerException().isThrownBy(() -> calculator.between(point, null));
     }
 
     @Test
     void samePointHasZeroDistance() {
         var point = TestObjects.coordinates().build();
-        assertEquals(0, calculator.between(point, point));
+        assertThat(calculator.between(point, point)).isZero();
     }
 
     @ParameterizedTest
@@ -40,8 +40,8 @@ class HaversineDistanceTest {
                                          double longitude2, double expected, double tolerance) {
         var from = new Coordinates(latitude1, longitude1);
         var to = new Coordinates(latitude2, longitude2);
-        assertEquals(expected, calculator.between(from, to), tolerance);
-        assertEquals(expected, calculator.between(to, from), tolerance);
+        assertThat(calculator.between(from, to)).isCloseTo(expected, within(tolerance));
+        assertThat(calculator.between(to, from)).isCloseTo(expected, within(tolerance));
     }
 
     @ParameterizedTest
@@ -51,7 +51,6 @@ class HaversineDistanceTest {
                                        double latitude2, double longitude2) {
         double result = calculator.between(new Coordinates(latitude1, longitude1),
                 new Coordinates(latitude2, longitude2));
-        assertTrue(Double.isFinite(result));
-        assertEquals(20015.114442035924, result, 0.001);
+        assertThat(result).isFinite().isCloseTo(20015.114442035924, within(0.001));
     }
 }

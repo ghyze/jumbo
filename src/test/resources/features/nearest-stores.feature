@@ -11,7 +11,7 @@ Feature: Find nearest stores from the JSON snapshot
     And the first 5 fixture stores are in nearest-first ID-tie order
     And the colocated stores "store-a" and "store-b" come first with zero distance
 
-  Scenario Outline: A positive count is respected up to the application cap
+  Scenario Outline: A requested limit of <limit> returns <count> stores up to the application cap
     Given a requested limit of "<limit>"
     When the nearest stores are requested over HTTP
     Then <count> stores are returned without warnings
@@ -22,7 +22,7 @@ Feature: Find nearest stores from the JSON snapshot
       | 3     | 3     |
       | 20    | 5     |
 
-  Scenario Outline: Invalid supplied limits are rejected
+  Scenario Outline: Invalid supplied limit <limit> is rejected
     Given a requested limit of "<limit>"
     When the nearest stores are requested over HTTP
     Then the response is a bad-limit problem

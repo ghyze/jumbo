@@ -1,10 +1,8 @@
 package com.jumbo.stores.repository;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import com.jumbo.stores.domain.Coordinates;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -46,14 +44,14 @@ class JsonStoreRepositoryTest {
 
         var store = repository.findAll().getFirst();
 
-        assertEquals("seed-a", store.id());
-        assertEquals("Jumbo Distinct Name", store.addressName());
-        assertEquals("Utrecht", store.city());
-        assertEquals("3511 AB", store.postalCode());
-        assertEquals("Voorstraat", store.street());
-        assertEquals("42", store.street2());
-        assertEquals("bis", store.street3());
-        assertEquals(new Coordinates(52.0907, 5.1214), store.coordinates());
+        assertThat(store.id()).isEqualTo("seed-a");
+        assertThat(store.addressName()).isEqualTo("Jumbo Distinct Name");
+        assertThat(store.city()).isEqualTo("Utrecht");
+        assertThat(store.postalCode()).isEqualTo("3511 AB");
+        assertThat(store.street()).isEqualTo("Voorstraat");
+        assertThat(store.street2()).isEqualTo("42");
+        assertThat(store.street3()).isEqualTo("bis");
+        assertThat(store.coordinates()).isEqualTo(new Coordinates(52.0907, 5.1214));
     }
 
     @Test
@@ -87,7 +85,7 @@ class JsonStoreRepositoryTest {
                 }
                 """).findAll();
 
-        assertEquals(2, stores.size());
+        assertThat(stores).hasSize(2);
     }
 
     @ParameterizedTest
@@ -118,10 +116,10 @@ class JsonStoreRepositoryTest {
                 }
                 """.formatted(latitude)).findAll();
 
-        assertEquals(2, stores.size());
-        assertEquals(Double.parseDouble(latitude), stores.getFirst().coordinates().latitude());
-        assertEquals(-180, stores.getFirst().coordinates().longitude());
-        assertEquals(180, stores.getLast().coordinates().longitude());
+        assertThat(stores).hasSize(2);
+        assertThat(stores.getFirst().coordinates().latitude()).isEqualTo(Double.parseDouble(latitude));
+        assertThat(stores.getFirst().coordinates().longitude()).isEqualTo(-180);
+        assertThat(stores.getLast().coordinates().longitude()).isEqualTo(180);
     }
 
     @Test
@@ -142,8 +140,8 @@ class JsonStoreRepositoryTest {
                 }
                 """).findAll().getFirst();
 
-        assertEquals("", store.street2());
-        assertEquals("", store.street3());
+        assertThat(store.street2()).isEmpty();
+        assertThat(store.street3()).isEmpty();
     }
 
     @Test
@@ -166,8 +164,8 @@ class JsonStoreRepositoryTest {
                 }
                 """).findAll().getFirst();
 
-        assertEquals("", store.street2());
-        assertEquals("", store.street3());
+        assertThat(store.street2()).isEmpty();
+        assertThat(store.street3()).isEmpty();
     }
 
     @Test
@@ -175,14 +173,14 @@ class JsonStoreRepositoryTest {
         var resource = new CountingResource(validDocument());
         var repository = new JsonStoreRepository(resource);
 
-        assertEquals(1, resource.reads);
-        assertTrue(resource.closes >= 1);
+        assertThat(resource.reads).isEqualTo(1);
+        assertThat(resource.closes).isGreaterThanOrEqualTo(1);
         var snapshot = repository.findAll();
-        assertSame(snapshot, repository.findAll());
-        assertSame(snapshot, repository.findAll());
-        assertEquals(1, resource.reads);
-        assertThrows(UnsupportedOperationException.class, snapshot::clear);
-        assertThrows(UnsupportedOperationException.class, () -> snapshot.add(snapshot.getFirst()));
+        assertThat(repository.findAll()).isSameAs(snapshot);
+        assertThat(repository.findAll()).isSameAs(snapshot);
+        assertThat(resource.reads).isEqualTo(1);
+        assertThatThrownBy(snapshot::clear).isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> snapshot.add(snapshot.getFirst())).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @ParameterizedTest
@@ -190,10 +188,10 @@ class JsonStoreRepositoryTest {
     void closesResourceWhenParsingOrValidationFails(String json) {
         var resource = new CountingResource(json);
 
-        assertThrows(IllegalStateException.class, () -> new JsonStoreRepository(resource));
+        assertThatThrownBy(() -> new JsonStoreRepository(resource)).isInstanceOf(IllegalStateException.class);
 
-        assertEquals(1, resource.reads);
-        assertTrue(resource.closes >= 1);
+        assertThat(resource.reads).isEqualTo(1);
+        assertThat(resource.closes).isGreaterThanOrEqualTo(1);
     }
 
     static Stream<String> failingDocuments() {
@@ -206,7 +204,7 @@ class JsonStoreRepositoryTest {
 
     @Test
     void invalidStoreRetainsResourceIndexIdAndOriginalCause() {
-        var failure = assertThrows(IllegalStateException.class, () -> repository("""
+        var failure = catchThrowable(() -> repository("""
                 {
                   "stores": [
                     {
@@ -231,19 +229,19 @@ class JsonStoreRepositoryTest {
                 }
                 """));
 
-        assertEquals("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[1] (uuid 'seed-b'): city must not be blank", failure.getMessage());
-        assertEquals("city must not be blank", failure.getCause().getCause().getMessage());
+        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
+                + "stores[1] (uuid 'seed-b'): city must not be blank");
+        assertThat(failure.getCause().getCause()).hasMessage("city must not be blank");
     }
 
     @ParameterizedTest
     @MethodSource("blankRequiredFields")
     void domainRejectsBlankStoreFieldsWithRepositoryContext(String json, String id, String domainMessage) {
-        var failure = assertThrows(IllegalStateException.class, () -> repository(json));
+        var failure = catchThrowable(() -> repository(json));
 
-        assertEquals("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[0] (uuid '" + id + "'): " + domainMessage, failure.getMessage());
-        assertEquals(domainMessage, failure.getCause().getCause().getMessage());
+        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
+                + "stores[0] (uuid '" + id + "'): " + domainMessage);
+        assertThat(failure.getCause().getCause()).hasMessage(domainMessage);
     }
 
     static Stream<Arguments> blankRequiredFields() {
@@ -308,11 +306,11 @@ class JsonStoreRepositoryTest {
     @ParameterizedTest
     @MethodSource("invalidShapes")
     void rejectsInvalidRootStoresOrEntryShape(String json, String expected) {
-        var failure = assertThrows(IllegalStateException.class, () -> repository(json));
+        var failure = catchThrowable(() -> repository(json));
 
-        assertTrue(failure.getMessage().contains("fixture"));
-        assertTrue(failure.getMessage().contains(expected), failure.getMessage());
-        assertNotNull(failure.getCause());
+        assertThat(failure).hasMessageContaining("fixture");
+        assertThat(failure).hasMessageContaining(expected);
+        assertThat(failure).cause().isNotNull();
     }
 
     static Stream<Arguments> invalidShapes() {
@@ -333,15 +331,14 @@ class JsonStoreRepositoryTest {
 
     @Test
     void rejectsTrailingJsonDocument() {
-        var failure = assertThrows(IllegalStateException.class, () -> repository(validDocument() + "{}"));
+        var failure = catchThrowable(() -> repository(validDocument() + "{}"));
 
-        assertTrue(failure.getMessage().contains("JSON structure does not match the store data format"),
-                failure.getMessage());
+        assertThat(failure).hasMessageContaining("JSON structure does not match the store data format");
     }
 
     @Test
     void rejectsDuplicateIdsWithIndexAndId() {
-        var failure = assertThrows(IllegalStateException.class, () -> repository("""
+        var failure = catchThrowable(() -> repository("""
                 {
                   "stores": [
                     {
@@ -366,8 +363,8 @@ class JsonStoreRepositoryTest {
                 }
                 """));
 
-        assertEquals("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[1] (uuid 'seed-a'): duplicate uuid 'seed-a'", failure.getMessage());
+        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
+                + "stores[1] (uuid 'seed-a'): duplicate uuid 'seed-a'");
     }
 
     @ParameterizedTest
@@ -379,11 +376,11 @@ class JsonStoreRepositoryTest {
             "street, street must not be blank"
     })
     void rejectsMissingRequiredTextFields(String field, String message) {
-        var failure = assertThrows(IllegalStateException.class, () -> repository(requiredFieldMissing(field)));
+        var failure = catchThrowable(() -> repository(requiredFieldMissing(field)));
 
         var context = field.equals("uuid") ? "stores[0]" : "stores[0] (uuid 'seed-a')";
-        assertEquals("Failed to load stores from Byte array resource [fixture]: "
-                + context + ": " + message, failure.getMessage());
+        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
+                + context + ": " + message);
     }
 
     @Test
@@ -406,20 +403,20 @@ class JsonStoreRepositoryTest {
                 }
                 """).findAll().getFirst();
 
-        assertEquals("123", store.id());
-        assertEquals("true", store.addressName());
-        assertEquals("42", store.street2());
-        assertEquals("false", store.street3());
-        assertEquals(new Coordinates(52.0907, 5.1214), store.coordinates());
+        assertThat(store.id()).isEqualTo("123");
+        assertThat(store.addressName()).isEqualTo("true");
+        assertThat(store.street2()).isEqualTo("42");
+        assertThat(store.street3()).isEqualTo("false");
+        assertThat(store.coordinates()).isEqualTo(new Coordinates(52.0907, 5.1214));
     }
 
     @ParameterizedTest
     @MethodSource("objectOrArrayStringFields")
     void rejectsObjectsAndArraysInStringFields(String json, String path) {
-        var failure = assertThrows(IllegalStateException.class, () -> repository(json));
+        var failure = catchThrowable(() -> repository(json));
 
-        assertTrue(failure.getMessage().contains("JSON structure does not match the store data format"));
-        assertTrue(failure.getMessage().contains(path), failure.getMessage());
+        assertThat(failure).hasMessageContaining("JSON structure does not match the store data format");
+        assertThat(failure).hasMessageContaining(path);
     }
 
     static Stream<Arguments> objectOrArrayStringFields() {
@@ -463,10 +460,10 @@ class JsonStoreRepositoryTest {
     @ParameterizedTest
     @MethodSource("missingCoordinates")
     void rejectsMissingCoordinates(String json, String expectedMessage) {
-        var failure = assertThrows(IllegalStateException.class, () -> repository(json));
+        var failure = catchThrowable(() -> repository(json));
 
-        assertEquals("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[0] (uuid 'seed-a'): " + expectedMessage, failure.getMessage());
+        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
+                + "stores[0] (uuid 'seed-a'): " + expectedMessage);
     }
 
     static Stream<Arguments> missingCoordinates() {
@@ -496,7 +493,7 @@ class JsonStoreRepositoryTest {
     @ParameterizedTest
     @MethodSource("invalidCoordinates")
     void rejectsUnparseableNonfiniteAndOutOfRangeCoordinates(String field, String value, String expectedMessage) {
-        var failure = assertThrows(IllegalStateException.class, () -> repository("""
+        var failure = catchThrowable(() -> repository("""
                 {
                   "stores": [
                     {
@@ -513,8 +510,8 @@ class JsonStoreRepositoryTest {
                 """.formatted(field.equals("latitude") ? value : "52.0907",
                 field.equals("longitude") ? value : "5.1214")));
 
-        assertEquals("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[0] (uuid 'seed-a'): " + expectedMessage, failure.getMessage());
+        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
+                + "stores[0] (uuid 'seed-a'): " + expectedMessage);
     }
 
     static Stream<Arguments> invalidCoordinates() {
@@ -537,11 +534,11 @@ class JsonStoreRepositoryTest {
 
     @Test
     void missingResourceFailsEagerlyWithResourceContext() {
-        var failure = assertThrows(IllegalStateException.class,
+        var failure = catchThrowable(
                 () -> new JsonStoreRepository(new ClassPathResource("missing-stores-test.json")));
 
-        assertTrue(failure.getMessage().contains("missing-stores-test.json"));
-        assertNotNull(failure.getCause());
+        assertThat(failure).hasMessageContaining("missing-stores-test.json");
+        assertThat(failure).cause().isNotNull();
     }
 
     @Test
@@ -558,10 +555,11 @@ class JsonStoreRepositoryTest {
             }
         };
 
-        var failure = assertThrows(IllegalStateException.class, () -> new JsonStoreRepository(resource));
+        var failure = catchThrowable(() -> new JsonStoreRepository(resource));
 
-        assertTrue(failure.getMessage().contains("unreadable seed"));
-        assertTrue(failure.getMessage().contains("read denied"));
+        assertThat(failure).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("unreadable seed")
+                .hasMessageContaining("read denied");
     }
 
     @Test
@@ -569,17 +567,17 @@ class JsonStoreRepositoryTest {
         var repository = new JsonStoreRepository(new ClassPathResource("stores.json"));
         var stores = repository.findAll();
 
-        assertTrue(stores.stream().map(store -> store.id()).allMatch(id -> id != null && !id.isBlank()));
-        assertEquals(stores.size(), stores.stream().map(store -> store.id()).distinct().count());
+        assertThat(stores).extracting(store -> store.id()).allSatisfy(id -> assertThat(id).isNotBlank());
+        assertThat(stores.stream().map(store -> store.id()).distinct()).hasSize(stores.size());
         var first = stores.getFirst();
-        assertEquals("EOgKYx4XFiQAAAFJa_YYZ4At", first.id());
-        assertEquals("Jumbo 's Gravendeel Gravendeel Centrum", first.addressName());
-        assertEquals("'s Gravendeel", first.city());
-        assertEquals("3295 BD", first.postalCode());
-        assertEquals("Kerkstraat", first.street());
-        assertEquals("37", first.street2());
-        assertEquals("", first.street3());
-        assertEquals(new Coordinates(51.778461, 4.615551), first.coordinates());
+        assertThat(first.id()).isEqualTo("EOgKYx4XFiQAAAFJa_YYZ4At");
+        assertThat(first.addressName()).isEqualTo("Jumbo 's Gravendeel Gravendeel Centrum");
+        assertThat(first.city()).isEqualTo("'s Gravendeel");
+        assertThat(first.postalCode()).isEqualTo("3295 BD");
+        assertThat(first.street()).isEqualTo("Kerkstraat");
+        assertThat(first.street2()).isEqualTo("37");
+        assertThat(first.street3()).isEmpty();
+        assertThat(first.coordinates()).isEqualTo(new Coordinates(51.778461, 4.615551));
     }
 
     private static String validDocument() {

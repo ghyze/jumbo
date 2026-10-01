@@ -1,8 +1,7 @@
 package com.jumbo.stores.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -18,7 +17,7 @@ class SearchPropertiesTest {
     void defaultsToFiveOnlyWhenOmitted() {
         contextRunner.run(context -> {
             assertThat(context).hasNotFailed();
-            assertEquals(5, context.getBean(SearchProperties.class).maxResults());
+            assertThat(context.getBean(SearchProperties.class).maxResults()).isEqualTo(5);
         });
     }
 
@@ -27,7 +26,7 @@ class SearchPropertiesTest {
     void allowsPositiveOverride(int maximum) {
         contextRunner.withPropertyValues("stores.search.max-results=" + maximum).run(context -> {
             assertThat(context).hasNotFailed();
-            assertEquals(maximum, context.getBean(SearchProperties.class).maxResults());
+            assertThat(context.getBean(SearchProperties.class).maxResults()).isEqualTo(maximum);
         });
     }
 
@@ -50,7 +49,7 @@ class SearchPropertiesTest {
     @ParameterizedTest
     @ValueSource(ints = {0, -1, Integer.MIN_VALUE})
     void directConstructionAlsoRejectsNonpositiveMaximum(int maximum) {
-        assertThrows(IllegalArgumentException.class, () -> new SearchProperties(maximum));
+        assertThatIllegalArgumentException().isThrownBy(() -> new SearchProperties(maximum));
     }
 
     @Configuration(proxyBeanMethods = false)

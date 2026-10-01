@@ -1,8 +1,6 @@
 package com.jumbo.stores.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jumbo.stores.service.DistanceCalculator;
 import com.jumbo.stores.service.HaversineDistance;
 import com.jumbo.stores.service.StoreService;
@@ -23,11 +21,11 @@ class StoreConfigurationTest {
                     assertThat(context.getBean(DistanceCalculator.class)).isInstanceOf(HaversineDistance.class);
                     var result = context.getBean(StoreService.class)
                             .findNearest(TestObjects.coordinates().build(), 5);
-                    assertEquals(5, result.stores().size());
-                    assertTrue(result.warnings().isEmpty());
+                    assertThat(result.stores()).hasSize(5);
+                    assertThat(result.warnings()).isEmpty();
                     for (int index = 1; index < result.stores().size(); index++) {
-                        assertTrue(result.stores().get(index - 1).distanceKm()
-                                <= result.stores().get(index).distanceKm());
+                        assertThat(result.stores().get(index - 1).distanceKm())
+                                .isLessThanOrEqualTo(result.stores().get(index).distanceKm());
                     }
                 });
     }
