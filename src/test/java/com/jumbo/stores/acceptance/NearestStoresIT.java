@@ -13,5 +13,7 @@ import org.junit.platform.suite.api.Suite;
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.jumbo.stores.acceptance.cucumber")
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME,
         value = "pretty,json:target/cucumber/nearest-stores.json,html:target/cucumber/nearest-stores.html")
+@ConfigurationParameter(key = "cucumber.junit-platform.naming-strategy", value = "long")
+@ConfigurationParameter(key = "cucumber.junit-platform.naming-strategy.long.example-name", value = "pickle")
 public class NearestStoresIT {
 }
