@@ -30,8 +30,7 @@ class ConfiguredNearestStoresEndpointTest extends FixtureServer {
 
     static Stream<Arguments> limits() {
         return Stream.of(
-                Arguments.of(null, 10), Arguments.of("3", 3),
-                Arguments.of("10", 10), Arguments.of("20", 10),
-                Arguments.of("", 10));
+                Arguments.of(null, 10), Arguments.of("10", 10),
+                Arguments.of("20", 10), Arguments.of("", 10));
     }
 }

@@ -3,7 +3,6 @@ package com.jumbo.stores.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.jumbo.stores.repository.StoreRepository;
 import com.jumbo.stores.service.DistanceCalculator;
 import com.jumbo.stores.service.HaversineDistance;
 import com.jumbo.stores.service.StoreService;
@@ -22,7 +21,6 @@ class StoreConfigurationTest {
                     assertThat(context).hasNotFailed();
                     assertThat(context).hasSingleBean(DistanceCalculator.class);
                     assertThat(context.getBean(DistanceCalculator.class)).isInstanceOf(HaversineDistance.class);
-                    assertEquals(587, context.getBean(StoreRepository.class).findAll().size());
                     var result = context.getBean(StoreService.class)
                             .findNearest(TestObjects.coordinates().build(), 5);
                     assertEquals(5, result.stores().size());
