@@ -92,23 +92,8 @@ Surrounding whitespace is trimmed. No request returns more stores than available
 `StoreService` receives a `DistanceCalculator` through constructor injection. Its `between` method
 returns a finite, nonnegative distance in kilometres. `HaversineDistance` is the default implementation;
 the calculation and result ordering are unchanged.
-
-Spring Boot selects the implementation at startup through `stores.distance.algorithm`. For example:
-
-```powershell
-java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.distance.algorithm=haversine
-```
-
-The same setting can be supplied in application YAML or through the environment variable
-`STORES_DISTANCE_ALGORITHM`. Omitting it selects Haversine; an unknown or blank value fails startup
-rather than silently falling back.
-
-To add an algorithm, implement `DistanceCalculator` and register a `@Bean` with
-`@ConditionalOnProperty(prefix = "stores.distance", name = "algorithm", havingValue = "your-algorithm")`,
-following the Haversine bean in `StoreConfiguration`. Reserve `matchIfMissing = true` for Haversine.
-Both implementations can be packaged together, with exactly one enabled by the deployment setting.
-Only Haversine is currently provided; switching requires the alternative implementation to be included
-in the application and a restart, not a change to `StoreService`.
+Adding a second algorithm requires another `DistanceCalculator` implementation and a selection switch
+once there are two implementations to choose from.
 
 ### Coverage warnings
 
