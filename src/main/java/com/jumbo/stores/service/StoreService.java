@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
 public class StoreService {
     private static final Comparator<NearestStore> NEAREST_FIRST = Comparator.comparingDouble(NearestStore::distanceKm)
             .thenComparing(result -> result.store().id());
+    private static final SearchWarning OUTSIDE_COVERAGE = new SearchWarning(WarningCode.OUTSIDE_SUPPORTED_AREA,
+            "The dataset covers the Netherlands; this location is outside the approximate coverage area "
+                    + "and results may be far away.");
 
     private final StoreRepository repository;
     private final SearchProperties properties;
@@ -37,10 +40,7 @@ public class StoreService {
                 .sorted(NEAREST_FIRST)
                 .limit(Math.min(limit, properties.maxResults()))
                 .toList();
-        List<SearchWarning> warnings = CoverageArea.NETHERLANDS.contains(coordinates) ? List.of() : List.of(new SearchWarning(
-                WarningCode.OUTSIDE_SUPPORTED_AREA,
-                "The dataset covers the Netherlands; this location is outside the approximate coverage area "
-                        + "and results may be far away."));
+        var warnings = CoverageArea.NETHERLANDS.contains(coordinates) ? List.<SearchWarning>of() : List.of(OUTSIDE_COVERAGE);
         return new SearchResult(nearest, warnings);
     }
 }

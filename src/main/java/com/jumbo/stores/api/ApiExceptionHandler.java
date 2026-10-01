@@ -3,8 +3,10 @@ package com.jumbo.stores.api;
 import com.jumbo.stores.domain.InvalidCoordinatesException;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ElementKind;
+import jakarta.validation.Path;
 import java.net.URI;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -76,15 +78,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static String parameterName(ConstraintViolationException exception) {
         return exception.getConstraintViolations().stream()
-                .flatMap(violation -> {
-                    var nodes = new java.util.ArrayList<String>();
-                    for (var node : violation.getPropertyPath()) {
-                        if (node.getKind() == ElementKind.PARAMETER) {
-                            nodes.add(node.getName());
-                        }
-                    }
-                    return nodes.stream();
-                })
+                .flatMap(violation -> StreamSupport.stream(violation.getPropertyPath().spliterator(), false))
+                .filter(node -> node.getKind() == ElementKind.PARAMETER)
+                .map(Path.Node::getName)
                 .findFirst()
                 .orElse("");
     }
