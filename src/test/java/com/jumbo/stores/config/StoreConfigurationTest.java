@@ -33,4 +33,15 @@ class StoreConfigurationTest {
                     }
                 });
     }
+
+    @Test
+    void missingStoreDataLocationFailsStartup() {
+        runner.withPropertyValues("stores.data.location=classpath:does-not-exist.json")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasStackTraceContaining("Failed to load stores")
+                            .hasStackTraceContaining("does-not-exist.json");
+                });
+    }
 }

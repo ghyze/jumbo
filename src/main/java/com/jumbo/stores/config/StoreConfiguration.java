@@ -7,10 +7,9 @@ import com.jumbo.stores.service.HaversineDistance;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(SearchProperties.class)
+@EnableConfigurationProperties({SearchProperties.class, StoreDataProperties.class})
 public class StoreConfiguration {
     @Bean
     public DistanceCalculator haversineDistance() {
@@ -18,7 +17,7 @@ public class StoreConfiguration {
     }
 
     @Bean
-    public StoreRepository storeRepository() {
-        return new JsonStoreRepository(new ClassPathResource("stores.json"));
+    public StoreRepository storeRepository(StoreDataProperties properties) {
+        return new JsonStoreRepository(properties.location());
     }
 }
