@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
-import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.exc.MismatchedInputException;
 import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
@@ -35,81 +35,72 @@ public final class JsonStoreRepository implements StoreRepository {
             var mapper = JsonMapper.builder()
                     .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                     .build();
-            JsonNode entries = storeEntries(mapper.readTree(input));
-            return parseStores(entries);
+            StoresFile storesFile = mapper.readValue(input, StoresFile.class);
+            return parseStores(storesFile);
+        } catch (MismatchedInputException exception) {
+            throw new IllegalStateException("Failed to load stores from " + resource.getDescription()
+                    + ": JSON structure does not match the store data format"
+                    + pathReference(exception), exception);
         } catch (IOException | JacksonException | IllegalArgumentException exception) {
             throw new IllegalStateException("Failed to load stores from " + resource.getDescription()
                     + ": " + exception.getMessage(), exception);
         }
     }
 
-    private static JsonNode storeEntries(JsonNode root) {
-        if (root == null || !root.isObject()) {
-            throw new IllegalArgumentException("root must be an object containing a stores array");
-        }
-        JsonNode entries = root.get("stores");
-        if (entries == null || !entries.isArray() || entries.isEmpty()) {
-            throw new IllegalArgumentException("stores must be a nonempty array");
-        }
-        return entries;
+    private static String pathReference(MismatchedInputException exception) {
+        String reference = exception.getPathReference();
+        return reference == null || reference.isBlank() ? "" : " at " + reference;
     }
 
-    private static List<Store> parseStores(JsonNode entries) {
+    private static List<Store> parseStores(StoresFile storesFile) {
+        if (storesFile == null || storesFile.stores() == null || storesFile.stores().isEmpty()) {
+            throw new IllegalArgumentException("stores must be a nonempty array");
+        }
         var result = new ArrayList<Store>();
         var ids = new HashSet<String>();
-        for (int index = 0; index < entries.size(); index++) {
-            result.add(parseStore(entries.get(index), index, ids));
+        for (int index = 0; index < storesFile.stores().size(); index++) {
+            result.add(parseStore(storesFile.stores().get(index), index, ids));
         }
         return List.copyOf(result);
     }
 
-    private static Store parseStore(JsonNode entry, int index, Set<String> ids) {
-        String id = null;
+    private static Store parseStore(StoreJson entry, int index, Set<String> ids) {
         try {
-            if (!entry.isObject()) {
+            if (entry == null) {
                 throw new IllegalArgumentException("store must be an object");
             }
-            id = requiredString(entry, "uuid");
-            if (!ids.add(id)) {
-                throw new IllegalArgumentException("duplicate uuid '" + id + "'");
+            Store store = entry.toStore();
+            if (!ids.add(store.id())) {
+                throw new IllegalArgumentException("duplicate uuid '" + store.id() + "'");
             }
-            return new Store(id, requiredString(entry, "addressName"),
-                    requiredString(entry, "city"), requiredString(entry, "postalCode"),
-                    requiredString(entry, "street"), optionalText(entry, "street2"),
-                    optionalText(entry, "street3"),
-                    new Coordinates(coordinate(entry, "latitude"), coordinate(entry, "longitude")));
+            return store;
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("stores[" + index + "]"
-                    + (id == null ? "" : " (uuid '" + id + "')")
+                    + (entry == null || entry.uuid() == null ? "" : " (uuid '" + entry.uuid() + "')")
                     + ": " + exception.getMessage(), exception);
         }
     }
 
-    private static String requiredString(JsonNode entry, String field) {
-        JsonNode value = entry.get(field);
-        if (value == null || !value.isString()) {
-            throw new IllegalArgumentException(field + " must be a string");
+    private static double coordinate(String value, String field) {
+        if (value == null) {
+            throw new IllegalArgumentException(field + " is required");
         }
-        return value.asString();
-    }
-
-    private static String optionalText(JsonNode entry, String field) {
-        JsonNode value = entry.get(field);
-        if (value == null || value.isNull()) {
-            return "";
-        }
-        if (!value.isString()) {
-            throw new IllegalArgumentException(field + " must be a string when supplied");
-        }
-        return value.asString();
-    }
-
-    private static double coordinate(JsonNode entry, String field) {
-        String value = requiredString(entry, field);
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException(field + " must be a numeric string", exception);
+        }
+    }
+
+    private record StoresFile(List<StoreJson> stores) {
+    }
+
+    private record StoreJson(String uuid, String addressName, String city, String postalCode,
+                             String street, String street2, String street3,
+                             String latitude, String longitude) {
+        private Store toStore() {
+            return new Store(uuid, addressName, city, postalCode, street, street2, street3,
+                    new Coordinates(coordinate(latitude, "latitude"), coordinate(longitude, "longitude")));
         }
     }
 }

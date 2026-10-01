@@ -88,28 +88,20 @@ java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.search.max-results=1
 
 No request returns more stores than available. Invalid application configuration fails startup rather than quietly reverting to five. The cap bounds response size; it does not rate-limit requests or eliminate the full distance scan.
 
+### Store data
+
+By default, the application loads `classpath:stores.json`. To swap the dataset at startup, pass a
+Spring resource location such as `--stores.data.location=file:C:\data\stores.json`.
+The JSON loader uses Jackson data binding with default coercion: unknown fields are ignored, numbers
+and booleans in text fields become strings, and objects or arrays in text fields fail startup.
+
 ### Distance algorithm
 
 `StoreService` receives a `DistanceCalculator` through constructor injection. Its `between` method
 returns a finite, nonnegative distance in kilometres. `HaversineDistance` is the default implementation;
 the calculation and result ordering are unchanged.
-
-Spring Boot selects the implementation at startup through `stores.distance.algorithm`. For example:
-
-```powershell
-java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.distance.algorithm=haversine
-```
-
-The same setting can be supplied in application YAML or through the environment variable
-`STORES_DISTANCE_ALGORITHM`. Omitting it selects Haversine; an unknown or blank value fails startup
-rather than silently falling back.
-
-To add an algorithm, implement `DistanceCalculator` and register a `@Bean` with
-`@ConditionalOnProperty(prefix = "stores.distance", name = "algorithm", havingValue = "your-algorithm")`,
-following the Haversine bean in `StoreConfiguration`. Reserve `matchIfMissing = true` for Haversine.
-Both implementations can be packaged together, with exactly one enabled by the deployment setting.
-Only Haversine is currently provided; switching requires the alternative implementation to be included
-in the application and a restart, not a change to `StoreService`.
+Adding a second algorithm requires another `DistanceCalculator` implementation and a selection switch
+once there are two implementations to choose from.
 
 ### Coverage warnings
 
@@ -151,7 +143,7 @@ Request -> handwritten StoreController implementing generated StoresApi
 
 - A validated immutable `Coordinates` value object keeps latitude and longitude together.
 - `Store` owns required-text invariants, so its constructor and builder cannot create stores with null or blank required fields. `JsonStoreRepository` acts as an anti-corruption layer: it validates JSON structure and types, parses coordinate strings, detects duplicate IDs, and constructs domain objects. Domain validation failures retain resource, entry-index, and UUID context; blank-string rules are not duplicated in the repository.
-- The read-only repository resembles a database repository but eagerly reads the entire JSON file once during startup. Maven packages only `src/main/resources/stores.json` as a standard classpath resource. Updates require restart.
+- The read-only repository resembles a database repository but eagerly reads the entire JSON file once during startup. Maven packages `src/main/resources/stores.json` as the default classpath resource, and `stores.data.location` can point at another Spring resource. Updates require restart.
 - Missing or malformed data, invalid required fields/coordinates, duplicate IDs, or an empty dataset fail startup. Unknown metadata is ignored; malformed stores are not silently skipped.
 - All seed entries participate regardless of opening hours, collection-point flags, or location type. Optional address components are normalized to empty strings.
 - The service computes all distances and sorts them: `O(n log n)` time and `O(n)` temporary space. This is deliberately simple for 587 stores.

@@ -50,7 +50,7 @@ class ApiExceptionHandlerTest {
     @Test
     void coordinateBoundaryErrorsNameTheInvalidParameter() {
         var problem = assertProblem(handler.handleInvalidCoordinates(
-                new InvalidCoordinatesException("latitude"), request()), 400, "Bad Request");
+                new InvalidCoordinatesException("latitude", 90), request()), 400, "Bad Request");
         assertEquals("Query parameter 'latitude' must be a number between -90 and 90.", problem.getDetail());
     }
 

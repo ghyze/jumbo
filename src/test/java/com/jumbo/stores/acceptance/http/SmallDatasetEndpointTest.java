@@ -2,7 +2,6 @@ package com.jumbo.stores.acceptance.http;
 
 import static com.jumbo.stores.acceptance.HttpAssertions.*;
 import com.jumbo.stores.NearestStoresApplication;
-import com.jumbo.stores.repository.StoreRepository;
 import io.restassured.response.Response;
 import java.util.LinkedHashMap;
 import java.util.stream.Stream;
@@ -11,14 +10,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.bean.override.convention.TestBean;
 
-@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "stores.data.location=classpath:fixtures/three-stores.json")
 class SmallDatasetEndpointTest {
-    @TestBean(name = "storeRepository", enforceOverride = true,
-            methodName = "com.jumbo.stores.acceptance.FixtureRepositories#threeStores")
-    StoreRepository storeRepository;
-
     @LocalServerPort
     int port;
 
