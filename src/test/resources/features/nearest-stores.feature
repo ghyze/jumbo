@@ -48,9 +48,9 @@ Feature: Find nearest stores from the JSON snapshot
   Scenario: Globally invalid coordinates are rejected instead of returning a coverage warning
     Given a search position at latitude "91" and longitude "5"
     When the nearest stores are requested over HTTP
-    Then the response is a bad-coordinate problem
+    Then the response is a bad-coordinate problem for "latitude"
 
   Scenario: A required coordinate cannot be omitted
     Given the "longitude" coordinate is omitted
     When the nearest stores are requested over HTTP
-    Then the response is a bad-coordinate problem
+    Then the response is a bad-coordinate problem for "longitude"

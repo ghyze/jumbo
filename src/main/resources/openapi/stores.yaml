@@ -203,14 +203,14 @@ paths:
                     type: about:blank
                     title: Bad Request
                     status: 400
-                    detail: Latitude must be finite and between -90 and 90.
+                    detail: Query parameter 'latitude' must be a number between -90 and 90.
                     instance: /api/stores/nearest
                 nonnumericCoordinate:
                   value:
                     type: about:blank
                     title: Bad Request
                     status: 400
-                    detail: Query parameter 'longitude' must be a number.
+                    detail: Query parameter 'longitude' must be a number between -180 and 180.
                     instance: /api/stores/nearest
         '500':
           description: Unexpected server failure; diagnostic details are logged server-side.

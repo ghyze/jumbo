@@ -82,7 +82,7 @@ class NearestStoresEndpointTest extends FixtureServer {
         } else {
             query.put(coordinate, value);
         }
-        assertBadCoordinates(search(port, query));
+        assertBadCoordinates(search(port, query), coordinate);
     }
 
     static Stream<Arguments> invalidCoordinates() {
@@ -97,7 +97,7 @@ class NearestStoresEndpointTest extends FixtureServer {
 
     @Test
     void rejectsBothMissingCoordinates() {
-        assertBadCoordinates(search(port, Map.of()));
+        assertBadCoordinates(search(port, Map.of()), "latitude");
     }
 
     @ParameterizedTest

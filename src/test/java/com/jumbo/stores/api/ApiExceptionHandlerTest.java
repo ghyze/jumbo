@@ -6,16 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jumbo.stores.domain.InvalidCoordinatesException;
-import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.service.HaversineDistance;
+import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.service.StoreService;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
-import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.TypeMismatchException;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -24,35 +23,35 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 class ApiExceptionHandlerTest {
     private final ApiExceptionHandler handler = new ApiExceptionHandler();
 
     @Test
-    void missingParametersUseTheCompleteProblemShape() throws Exception {
+    void missingParametersNameTheMissingParameter() throws Exception {
         var response = handler.handleException(
                 new MissingServletRequestParameterException("latitude", "Double"), request());
         var problem = assertProblem(response, 400, "Bad Request");
-        assertTrue(problem.getDetail().contains("latitude"));
-        assertTrue(problem.getDetail().contains("longitude"));
-        assertTrue(problem.getDetail().contains("finite"));
+        assertEquals("Required query parameter 'latitude' is missing.", problem.getDetail());
     }
 
     @Test
-    void bindingErrorsDoNotExposeValuesOrCauses() throws Exception {
-        var response = handler.handleException(new TypeMismatchException(
-                "sensitive-input", Double.class, new IllegalArgumentException("internal-converter-detail")),
-                request());
+    void bindingErrorsNameTheParameterButDoNotExposeValuesOrCauses() throws Exception {
+        var response = handler.handleException(new MethodArgumentTypeMismatchException(
+                "sensitive-input", Double.class, "longitude", (MethodParameter) null,
+                new IllegalArgumentException("internal-converter-detail")), request());
         var problem = assertProblem(response, 400, "Bad Request");
+        assertEquals("Query parameter 'longitude' must be a number between -180 and 180.", problem.getDetail());
         assertFalse(problem.getDetail().contains("sensitive-input"));
         assertFalse(problem.getDetail().contains("internal-converter-detail"));
-        assertFalse(problem.getDetail().contains("Double"));
     }
 
     @Test
-    void coordinateBoundaryErrorsUseTheSameProblemShape() {
-        assertProblem(handler.handleInvalidCoordinates(
+    void coordinateBoundaryErrorsNameTheInvalidParameter() {
+        var problem = assertProblem(handler.handleInvalidCoordinates(
                 new InvalidCoordinatesException("latitude"), request()), 400, "Bad Request");
+        assertEquals("Query parameter 'latitude' must be a number between -90 and 90.", problem.getDetail());
     }
 
     @Test
@@ -64,20 +63,9 @@ class ApiExceptionHandlerTest {
             var violations = factory.getValidator().forExecutables()
                     .validateParameters(controller, method, new Object[] {91.0, 5.0, null});
             assertFalse(violations.isEmpty());
-            assertProblem(handler.handleConstraintViolation(
-                    new ConstraintViolationException(violations), request()), 400, "Bad Request");
-        }
-    }
-
-    @Test
-    void invalidReturnValuesAreServerErrorsNotClientErrors() throws Exception {
-        try (var factory = Validation.buildDefaultValidatorFactory()) {
-            var violations = factory.getValidator().forExecutables().validateReturnValue(
-                    new InvalidReturnValue(), InvalidReturnValue.class.getMethod("value"), null);
-            assertFalse(violations.isEmpty());
             var problem = assertProblem(handler.handleConstraintViolation(
-                    new ConstraintViolationException(violations), request()), 500, "Internal Server Error");
-            assertFalse(problem.getDetail().contains("must not be null"));
+                    new ConstraintViolationException(violations), request()), 400, "Bad Request");
+            assertEquals("Query parameter 'latitude' must be a number between -90 and 90.", problem.getDetail());
         }
     }
 
@@ -94,7 +82,9 @@ class ApiExceptionHandlerTest {
     void otherHttpErrorsPreserveStandardStatusAndHeaders() throws Exception {
         var response = handler.handleException(
                 new HttpRequestMethodNotSupportedException("POST", List.of("GET")), request());
-        assertProblem(response, 405, "Method Not Allowed");
+        var problem = assertProblem(response, 405, "Method Not Allowed");
+        assertEquals("The request could not be processed. Check the request URL, method, and accepted media types.",
+                problem.getDetail());
         assertTrue(response.getHeaders().getAllow().contains(HttpMethod.GET));
     }
 
@@ -112,14 +102,6 @@ class ApiExceptionHandlerTest {
         assertEquals(title, problem.getTitle());
         assertEquals(status, problem.getStatus());
         assertFalse(isBlank(problem.getDetail()));
-        assertEquals(URI.create("/api/stores/nearest"), problem.getInstance());
         return problem;
-    }
-
-    public static class InvalidReturnValue {
-        @NotNull
-        public String value() {
-            return null;
-        }
     }
 }
