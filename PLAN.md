@@ -50,22 +50,22 @@ Keep this policy separate from global coordinate validity: `(0, 0)` is valid but
 
 ```text
 HTTP request
-  -> StoreRestAdapter implements generated StoresApi
+  -> StoreController implements generated StoresApi
   -> StoreService
   -> StoreRepository
   -> JsonStoreRepository's immutable in-memory snapshot
   -> StoreService calculates, sorts, selects up to limit, and evaluates coverage
-  -> StoreRestAdapter maps results to generated response models
+  -> StoreController maps results to generated response models
   -> HTTP response
 
 Application startup -> JsonStoreRepository loads and validates stores.json once
 ```
 
-Use packages underneath the existing `com.jumbo.demo` base package:
+Use packages underneath the `com.jumbo.stores` base package:
 
 | Area | Responsibility |
 | --- | --- |
-| `api` | Handwritten REST adapter, response mapping, and centralized exception handling |
+| `api` | Handwritten REST controller, response mapping, and centralized exception handling |
 | `api.generated` | Build-generated API interfaces and DTOs; no handwritten changes |
 | `service` | Nearest-store orchestration and geographic distance calculation |
 | `domain` | Immutable `Store`, shared `Coordinates` value object, and search results/warnings |
@@ -75,7 +75,7 @@ Keep generated models at the HTTP boundary. Neither service nor repository shoul
 
 ### Model mapping: handwritten initially
 
-Prefer small, explicit mapping methods for this assignment: seed DTO to domain `Store`/`Coordinates` in the repository boundary, HTTP parameters to domain inputs in the adapter, and domain search results to generated response DTOs in the API boundary. No additional request model is needed merely to wrap generated query parameters.
+Prefer small, explicit mapping methods for this assignment: seed DTO to domain `Store`/`Coordinates` in the repository boundary, HTTP parameters to domain inputs in the controller, and domain search results to generated response DTOs in the API boundary. No additional request model is needed merely to wrap generated query parameters.
 
 MapStruct is a reasonable alternative when repetitive field-to-field mappings grow: it generates type-safe code and can fail compilation for unmapped target properties. Here there are few mapping paths, while coordinate parsing, validation, optional-address normalization, and limit fallback need deliberate logic regardless of the mapper. Handwritten mapping keeps the build simpler alongside OpenAPI generation and Lombok. Test every exposed field with distinctive fixture values so swapped or omitted mappings are caught.
 
@@ -101,7 +101,7 @@ If adopted later, keep MapStruct interfaces at the boundaries, use Spring compon
 
 - Accept a `Coordinates` object and a resolved positive result limit, enforce the configured maximum in the service as well, read the snapshot through the repository interface, calculate each distance once, sort by distance then ID, and take up to the effective count. Produce the coverage warning independently of the count.
 - Put the Haversine calculation in a small independently testable class. Use radians consistently and clamp the intermediate Haversine value to `[0, 1]` to prevent floating-point errors near antipodal positions.
-- Enforce coordinate validity through `Coordinates` construction and positive/capped limits for direct service calls too, rather than relying solely on generated HTTP validation. Keep textual query parsing/fallback in a small adapter-boundary helper using the same configuration properties; do not duplicate configuration defaults. Direct invalid domain arguments remain programming errors, distinct from the documented forgiving HTTP parsing.
+- Enforce coordinate validity through `Coordinates` construction and positive/capped limits for direct service calls too, rather than relying solely on generated HTTP validation. Keep textual query parsing/fallback in a small controller-boundary helper using the same configuration properties; do not duplicate configuration defaults. Direct invalid domain arguments remain programming errors, distinct from the documented forgiving HTTP parsing.
 - Use a full scan and sort: `O(n log n)` time and `O(n)` temporary space are appropriate for 587 stores. Avoid a heap, geospatial library, or index unless requirements change.
 - Naturally return zero to the requested number of results for small repository snapshots, even though the production loader rejects an empty seed file.
 
@@ -113,10 +113,10 @@ The initial full scan is deliberately simple, not the only viable approach. If t
 - To avoid calculating all distances, build a suitable spatial index once at startup or later use a geospatial database repository. Use geographically correct candidate pruning (for example, a spherical nearest-neighbor index), followed by exact Haversine ranking. Preserve correctness near the antimeridian/poles and deterministic ID tie-breaking; naive latitude/longitude proximity or a fixed-radius prefilter can omit the actual nearest stores.
 - Compare optimized results with the exhaustive baseline across varied coordinates and limits, and measure latency/memory before accepting added complexity. These are future improvements, not initial acceptance requirements.
 
-### REST adapter and errors
+### REST controller and errors
 
 - Generate Spring API interfaces and request/response models; implement the generated interface in a handwritten `@RestController`. Generation defines the contract, not business logic or repository access.
-- Keep the adapter limited to input conversion, service delegation, and response/warning mapping.
+- Keep the controller limited to input conversion, service delegation, and response/warning mapping.
 - Resolve `limit` from its raw string before delegation; trim whitespace, accept decimal digits representing a positive integer, and fall back for other input. Compare positive digit strings safely against the configured maximum before bounded integer conversion, so even values beyond machine-integer range cap without arbitrary-precision allocation. Catch only expected parsing failures, not unrelated exceptions. Compose any invalid-limit warning with service coverage warnings.
 - Add Bean Validation support and ensure interface annotations are actually enforced by Spring MVC. Handle binding failures, missing parameters, validation failures, and domain coordinate errors consistently using Spring's exception-handling conventions.
 - Log successful dataset loading with the store count, and log unexpected server failures. Avoid noisy per-store or per-request logging.
@@ -175,7 +175,7 @@ Add `http/stores.http` with IntelliJ HTTP Client requests and a local `baseUrl` 
 Expand `README.md` with:
 
 - JDK 27 prerequisites and Windows/macOS wrapper commands for generating/building, testing, and running; no globally installed Maven, database, or container runtime required. Document `JAVA_HOME` selection for the required JDK.
-- Development startup via `.\mvnw.cmd spring-boot:run` on Windows or `./mvnw spring-boot:run` on macOS; packaged startup via `java -jar target\demo-0.0.1-SNAPSHOT.jar` on Windows or `java -jar target/demo-0.0.1-SNAPSHOT.jar` on macOS, plus copyable sample requests.
+- Development startup via `.\mvnw.cmd spring-boot:run` on Windows or `./mvnw spring-boot:run` on macOS; packaged startup via `java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar` on Windows or `java -jar target/nearest-stores-0.0.1-SNAPSHOT.jar` on macOS, plus copyable sample requests.
 - How to run the IntelliJ HTTP file and both automated test stages.
 - API/specification location, `stores.search.max-results` (default/cap five), and how to override it through application YAML or the Spring command-line argument `--stores.search.max-results=10`. Explain request capping and invalid-limit fallback separately from invalid-coordinate errors. Document the coverage box and non-blocking warnings, distance units/formula, tie-breaking, startup loading, and resource packaging.
 - Architecture and intentional trade-offs: in-memory read-only data, restart for updates, geographic rather than road distance, small-data full sorting, future optimization options, and exclusions.
@@ -205,6 +205,6 @@ Use this sequence as an ordering of work, not a time estimate. Do not attach spe
 - The packaged application loads the supplied JSON once and requires no external service or checkout-relative file access.
 - Results are deterministic and never exceed the configured application maximum (five by default) or available stores. Smaller valid requested limits are honored; omitted/invalid limits use the configured count, with a warning for invalid supplied input. Invalid coordinates retain documented error responses; valid out-of-coverage coordinates return results plus a warning.
 - Coordinates remain paired in a shared validated value object; tests use builders and real objects/small fakes in preference to mocks.
-- The handwritten adapter, service, and repository retain the defined boundaries.
+- The handwritten controller, service, and repository retain the defined boundaries.
 - The README and IntelliJ requests let a reviewer build, start, and exercise the application on Windows or macOS without Docker or a UI, with actual cross-platform checks recorded.
 - Generated Java is never edited by hand; no unrelated features or infrastructure are introduced.

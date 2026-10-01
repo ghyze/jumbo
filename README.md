@@ -35,13 +35,13 @@ The server listens on `http://localhost:8080`. Stop it with Ctrl+C.
 After `verify`, on Windows:
 
 ```powershell
-java -jar target\demo-0.0.1-SNAPSHOT.jar
+java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar
 ```
 
 On macOS:
 
 ```sh
-java -jar target/demo-0.0.1-SNAPSHOT.jar
+java -jar target/nearest-stores-0.0.1-SNAPSHOT.jar
 ```
 
 The JAR contains the store data and can be launched from any working directory; use the absolute JAR path when launching elsewhere.
@@ -75,7 +75,7 @@ stores:
 Or override it at startup (Windows example; use the macOS JAR path there):
 
 ```powershell
-java -jar target\demo-0.0.1-SNAPSHOT.jar --stores.search.max-results=10
+java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.search.max-results=10
 ```
 
 | Request `limit` | Behavior |
@@ -96,7 +96,7 @@ the calculation and result ordering are unchanged.
 Spring Boot selects the implementation at startup through `stores.distance.algorithm`. For example:
 
 ```powershell
-java -jar target\demo-0.0.1-SNAPSHOT.jar --stores.distance.algorithm=haversine
+java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.distance.algorithm=haversine
 ```
 
 The same setting can be supplied in application YAML or through the environment variable
@@ -143,9 +143,9 @@ Test data is built through `TestObjects` builders with valid defaults. Tests pre
 ## Architecture and trade-offs
 
 ```text
-Request -> handwritten REST adapter implementing generated StoresApi
+Request -> handwritten StoreController implementing generated StoresApi
         -> StoreService -> StoreRepository -> immutable in-memory stores
-        -> ranking/coverage result -> response mapping -> HTTP response
+        -> ranking/coverage result -> controller mapping -> HTTP response
 ```
 
 - A validated immutable `Coordinates` value object keeps latitude and longitude together.
