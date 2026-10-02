@@ -2,7 +2,6 @@ package com.jumbo.stores.acceptance.http;
 
 import static com.jumbo.stores.acceptance.HttpAssertions.*;
 import com.jumbo.stores.NearestStoresApplication;
-import com.jumbo.stores.acceptance.FixtureServer;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -12,9 +11,14 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 
-@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class NearestStoresEndpointTest extends FixtureServer {
+@SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "stores.data.location=classpath:fixtures/nearest-stores.json")
+class NearestStoresEndpointTest {
+    @LocalServerPort
+    int port;
+
     @ParameterizedTest(name = "invalid {0}={1}")
     @MethodSource("invalidCoordinates")
     void rejectsInvalidCoordinatesWithConsistentProblems(String coordinate, String value) {
