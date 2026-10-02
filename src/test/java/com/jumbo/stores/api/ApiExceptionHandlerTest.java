@@ -3,7 +3,6 @@ package com.jumbo.stores.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import com.jumbo.stores.domain.InvalidCoordinatesException;
 import com.jumbo.stores.service.HaversineDistance;
-import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.service.StoreService;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
@@ -52,8 +51,7 @@ class ApiExceptionHandlerTest {
 
     @Test
     void generatedParameterConstraintsAreInheritedAndReportedAsBadRequests() throws Exception {
-        var properties = new SearchProperties(5);
-        var controller = new StoreController(new StoreService(List::of, properties, new HaversineDistance()));
+        var controller = new StoreController(new StoreService(List::of, new HaversineDistance()));
         var method = StoreController.class.getMethod("findNearestStores", Double.class, Double.class);
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var violations = factory.getValidator().forExecutables()

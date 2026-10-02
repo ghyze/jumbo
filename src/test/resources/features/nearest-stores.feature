@@ -1,5 +1,5 @@
 Feature: Find nearest stores from the JSON snapshot
-  Customers can find nearby stores with the configured result count.
+  Customers can find nearby stores and get the five nearest.
   Results are geographic distances, and coverage does not block searches.
 
   Background:

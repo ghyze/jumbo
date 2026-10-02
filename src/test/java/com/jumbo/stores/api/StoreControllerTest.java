@@ -7,7 +7,6 @@ import com.jumbo.stores.api.generated.model.StoreResponse;
 import com.jumbo.stores.domain.InvalidCoordinatesException;
 import com.jumbo.stores.domain.Store;
 import com.jumbo.stores.service.HaversineDistance;
-import com.jumbo.stores.service.SearchProperties;
 import com.jumbo.stores.service.StoreService;
 import com.jumbo.stores.support.TestObjects;
 import java.util.List;
@@ -49,20 +48,20 @@ class StoreControllerTest {
     }
 
     @Test
-    void returnsJsonWithConfiguredDefaultAndServiceOrdering() {
-        var controller = controller(3, stores(5));
+    void returnsJsonWithFiveNearestStoresInServiceOrder() {
+        var controller = controller(stores(7));
         var response = controller.findNearestStores(52.0907, 5.1214);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
         var body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getStores().stream().map(store -> store.getId())).containsExactly("store-0", "store-1", "store-2");
+        assertThat(body.getStores().stream().map(store -> store.getId())).containsExactly("store-0", "store-1", "store-2", "store-3", "store-4");
         assertThat(body.getStores().getFirst().getDistanceKm()).isZero();
     }
 
     @Test
     void emptyRepositoryReturnsEmptyStores() {
-        var body = controller(5, List.of()).findNearestStores(52.0, 5.0).getBody();
+        var body = controller(List.of()).findNearestStores(52.0, 5.0).getBody();
         assertThat(body).isNotNull();
         assertThat(body.getStores()).isEmpty();
     }
@@ -71,23 +70,21 @@ class StoreControllerTest {
     @CsvSource({"NaN, 5", "Infinity, 5", "-Infinity, 5", "91, 5", "-91, 5",
             "52, NaN", "52, Infinity", "52, -Infinity", "52, 181", "52, -181"})
     void domainCoordinateFailuresBecomeSpecificInputErrors(double latitude, double longitude) {
-        assertThatThrownBy(() -> controller(5, stores(1)).findNearestStores(latitude, longitude))
+        assertThatThrownBy(() -> controller(stores(1)).findNearestStores(latitude, longitude))
                 .isInstanceOf(InvalidCoordinatesException.class);
     }
 
     @Test
     void unrelatedIllegalArgumentsRemainServerFailures() {
         var failure = new IllegalArgumentException("internal repository failure");
-        var properties = new SearchProperties(5);
-        var service = new StoreService(() -> { throw failure; }, properties, new HaversineDistance());
+        var service = new StoreService(() -> { throw failure; }, new HaversineDistance());
         var controller = new StoreController(service);
         assertThatIllegalArgumentException().isThrownBy(() -> controller.findNearestStores(52.0, 5.0))
                 .isSameAs(failure);
     }
 
-    private static StoreController controller(int maximum, List<Store> stores) {
-        var properties = new SearchProperties(maximum);
-        return new StoreController(new StoreService(() -> stores, properties, new HaversineDistance()));
+    private static StoreController controller(List<Store> stores) {
+        return new StoreController(new StoreService(() -> stores, new HaversineDistance()));
     }
 
     private static List<Store> stores(int count) {

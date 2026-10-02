@@ -50,21 +50,9 @@ The response is a JSON object with a `stores` array. Each store includes the see
 
 Latitude and longitude are required finite numbers in `[-90, 90]` and `[-180, 180]`. Missing, blank, nonnumeric, non-finite, or out-of-range coordinates return `400 application/problem+json` with `type`, `title`, `status`, `detail`, and `instance`. Unexpected failures return a generic `500` and are logged server-side.
 
-### Result count and configuration
+### Result count
 
-`stores.search.max-results` is both the default result count and the maximum any request can return. It defaults to **5**. Override it in YAML or at startup:
-
-```yaml
-stores:
-  search:
-    max-results: 10
-```
-
-```powershell
-java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.search.max-results=10
-```
-
-Every request uses the configured count; fewer stores are returned only when the dataset is smaller. Unknown query parameters are ignored by Spring. Invalid application configuration fails startup. The cap bounds response size; it is not request rate limiting.
+Every request returns the **5** nearest stores, as the brief asks; fewer are returned only when the dataset is smaller. Unknown query parameters are ignored by Spring.
 
 ### Store data and coverage
 
@@ -82,7 +70,7 @@ The OpenAPI source is [`src/main/resources/openapi/stores.yaml`](src/main/resour
 
 ## Manual requests
 
-Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. It covers default count, outside-coverage, missing-coordinate, invalid-coordinate, known-store, and health requests. The file assumes the default cap of five; update `configuredMax` if you override `stores.search.max-results`. Minimal operational health is available at `/actuator/health`.
+Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. It covers default count, outside-coverage, missing-coordinate, invalid-coordinate, known-store, and health requests. Minimal operational health is available at `/actuator/health`.
 
 ## Tests
 
@@ -91,14 +79,14 @@ Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual reque
 | Unit and real-HTTP endpoint tests | `.\mvnw.cmd test` | `./mvnw test` |
 | Full verification, including Cucumber | `.\mvnw.cmd clean verify` | `./mvnw clean verify` |
 
-JUnit covers domain invariants, distance calculation, repository loading and validation, configuration, result selection, HTTP edge cases, and response mapping. REST Assured exercises the embedded server on a random port. Cucumber covers the business-level request-to-repository scenarios with deterministic fixtures. Reports are under `target/surefire-reports`, `target/failsafe-reports`, and `target/cucumber`.
+JUnit covers domain invariants, distance calculation, repository loading and validation, result selection, HTTP edge cases, and response mapping. REST Assured exercises the embedded server on a random port. Cucumber covers the business-level request-to-repository scenarios with deterministic fixtures. Reports are under `target/surefire-reports`, `target/failsafe-reports`, and `target/cucumber`.
 
 ## Architecture
 
 ```text
 api         StoreController, ApiExceptionHandler, response mapping, generated API models
  │
-service     StoreService, SearchProperties, DistanceCalculator, HaversineDistance
+service     StoreService, DistanceCalculator, HaversineDistance
  │
 repository  StoreRepository, JsonStoreRepository
  │
@@ -107,13 +95,13 @@ domain      Coordinates, Store, NearestStore, CoverageArea
 config      StoreConfiguration and StoreDataProperties wire beans only
 ```
 
-Requests enter the handwritten `StoreController`, which implements the generated OpenAPI interface, converts inputs to domain values, delegates to `StoreService`, and maps nearest stores back to generated response models. The service applies the configured maximum, logs out-of-coverage searches, calculates distances for all stores, sorts by distance then ID, and selects the configured count. The repository owns JSON parsing and publishes an immutable in-memory snapshot.
+Requests enter the handwritten `StoreController`, which implements the generated OpenAPI interface, converts inputs to domain values, delegates to `StoreService`, and maps nearest stores back to generated response models. The service logs out-of-coverage searches, calculates distances for all stores, sorts by distance then ID, and selects the five nearest. The repository owns JSON parsing and publishes an immutable in-memory snapshot.
 
 This full scan and sort is `O(n log n)` and deliberately simple for 587 stores. Updates to the dataset require restart. Generated HTTP models stay at the API boundary; JSON deserialization stays in the repository; business rules live in service or domain.
 
 ## Design decisions
 
-- **D1 — No `limit` parameter:** the brief asks for the five nearest stores; the count is configurable via `stores.search.max-results`. This supersedes the forgiving-limit design in `PLAN.md` §1.
+- **D1 — No `limit` parameter:** the brief asks for the five nearest stores; the count is a fixed constant in `StoreService`. This supersedes the forgiving-limit design in `PLAN.md` §1.
 - **D2 — No distance-algorithm switch:** the Haversine implementation is wired directly while keeping the `DistanceCalculator` seam for tests and future alternatives.
 - **D3 — Keep Lombok:** limited use of Lombok avoids boilerplate without adding new architectural concepts.
 - **D4 — Rename Initializr placeholders:** artifact, application class, controller, package, and Spring application name use `nearest-stores` / `com.jumbo.stores` to look submission-ready.

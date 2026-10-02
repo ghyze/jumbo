@@ -18,11 +18,12 @@ public class StoreService {
     static final String OUTSIDE_COVERAGE_MESSAGE =
             "Search position is outside the supported coverage area; results may be far away";
 
+    static final int MAX_RESULTS = 5;
+
     private static final Comparator<NearestStore> NEAREST_FIRST = Comparator.comparingDouble(NearestStore::distanceKm)
             .thenComparing(result -> result.store().id());
 
     private final StoreRepository repository;
-    private final SearchProperties properties;
     private final DistanceCalculator distanceCalculator;
 
     public List<NearestStore> findNearest(Coordinates coordinates) {
@@ -33,7 +34,7 @@ public class StoreService {
         return repository.findAll().stream()
                 .map(store -> new NearestStore(store, distanceCalculator.between(coordinates, store.coordinates())))
                 .sorted(NEAREST_FIRST)
-                .limit(properties.maxResults())
+                .limit(MAX_RESULTS)
                 .toList();
     }
 }

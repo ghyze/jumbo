@@ -25,8 +25,7 @@ paths:
       description: |
         Return nearest-store entries sorted by increasing distance, then ID for exact
         ties. All seed stores are candidates regardless of opening hours,
-        collection-point status, or location type. The configured maximum result
-        count is used for every request.
+        collection-point status, or location type. At most five stores are returned.
 
         Examples below use an illustrative three-store dataset to keep responses
         concise; the production dataset has more stores.
@@ -64,7 +63,7 @@ paths:
                 $ref: '#/components/schemas/NearestStoresResponse'
               examples:
                 nearestStores:
-                  summary: Illustrative dataset smaller than the configured count
+                  summary: Illustrative dataset with fewer than five stores
                   value:
                     stores:
                       - &firstStore
