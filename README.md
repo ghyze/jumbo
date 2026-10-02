@@ -43,7 +43,7 @@ On macOS use `target/nearest-stores-0.0.1-SNAPSHOT.jar`. The JAR contains `store
 ## API
 
 ```http
-GET http://localhost:8080/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=3
+GET http://localhost:8080/api/stores/nearest?latitude=52.0907&longitude=5.1214
 ```
 
 The response is a JSON object with `stores` and `warnings` arrays. Each store includes the seed UUID as `id`, address fields, numeric latitude/longitude, and `distanceKm`. Results are ordered by unrounded Haversine distance, then ID for exact ties. Distances use mean Earth radius **6,371.0088 km** and are not road distances or travel times.
@@ -64,14 +64,7 @@ stores:
 java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.search.max-results=10
 ```
 
-| Request `limit` | Behavior |
-| --- | --- |
-| Omitted or blank | Use the configured count |
-| Positive integer below the cap | Use the requested count |
-| Positive integer above the cap | Silently cap at the configured count |
-| Nonnumeric, fractional, zero, negative, or beyond the 32-bit integer range | Return `400 Bad Request` naming `limit` |
-
-No response returns more stores than available. Invalid application configuration fails startup. The cap bounds response size; it is not request rate limiting.
+Every request uses the configured count; fewer stores are returned only when the dataset is smaller. Unknown query parameters are ignored by Spring. Invalid application configuration fails startup. The cap bounds response size; it is not request rate limiting.
 
 ### Store data and coverage
 
@@ -89,7 +82,7 @@ The OpenAPI source is [`src/main/resources/openapi/stores.yaml`](src/main/resour
 
 ## Manual requests
 
-Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. It covers default, smaller, capped, invalid-limit, outside-coverage, missing-coordinate, invalid-coordinate, known-store, and health requests. The file assumes the default cap of five; update `configuredMax` if you override `stores.search.max-results`. Minimal operational health is available at `/actuator/health`.
+Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. It covers default count, outside-coverage, missing-coordinate, invalid-coordinate, known-store, and health requests. The file assumes the default cap of five; update `configuredMax` if you override `stores.search.max-results`. Minimal operational health is available at `/actuator/health`.
 
 ## Tests
 
@@ -114,13 +107,13 @@ domain      Coordinates, Store, NearestStore, SearchResult, SearchWarning, Warni
 config      StoreConfiguration and StoreDataProperties wire beans only
 ```
 
-Requests enter the handwritten `StoreController`, which implements the generated OpenAPI interface, converts inputs to domain values, delegates to `StoreService`, and maps domain results back to generated response models. The service applies the default/cap, calculates distances for all stores, sorts by distance then ID, selects the requested count, and adds any coverage warning. The repository owns JSON parsing and publishes an immutable in-memory snapshot.
+Requests enter the handwritten `StoreController`, which implements the generated OpenAPI interface, converts inputs to domain values, delegates to `StoreService`, and maps domain results back to generated response models. The service applies the configured maximum, calculates distances for all stores, sorts by distance then ID, selects the configured count, and adds any coverage warning. The repository owns JSON parsing and publishes an immutable in-memory snapshot.
 
 This full scan and sort is `O(n log n)` and deliberately simple for 587 stores. Updates to the dataset require restart. Generated HTTP models stay at the API boundary; JSON deserialization stays in the repository; business rules live in service or domain.
 
 ## Design decisions
 
-- **D1 — Strict invalid `limit`:** invalid supplied limits return `400`; valid values above the cap are capped. This reverses the forgiving fallback in `PLAN.md` §1 because client input errors are clearer than hidden defaults and warning codes.
+- **D1 — No `limit` parameter:** the brief asks for the five nearest stores; the count is configurable via `stores.search.max-results`. This supersedes the forgiving-limit design in `PLAN.md` §1.
 - **D2 — No distance-algorithm switch:** the Haversine implementation is wired directly while keeping the `DistanceCalculator` seam for tests and future alternatives.
 - **D3 — Keep Lombok:** limited use of Lombok avoids boilerplate without adding new architectural concepts.
 - **D4 — Rename Initializr placeholders:** artifact, application class, controller, package, and Spring application name use `nearest-stores` / `com.jumbo.stores` to look submission-ready.

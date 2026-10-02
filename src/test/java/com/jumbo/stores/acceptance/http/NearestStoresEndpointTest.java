@@ -12,31 +12,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest(classes = NearestStoresApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class NearestStoresEndpointTest extends FixtureServer {
-    @ParameterizedTest(name = "limit={0}, count={1}")
-    @MethodSource("limits")
-    void resolvesValidLimitsWithoutChangingSuccessContentType(String limit, int count) {
-        Response response = search(port, Map.of("latitude", "52", "longitude", "5", "limit", limit));
-        assertSuccess(response, count);
-        assertFixtureOrder(response, count);
-    }
-
-    static Stream<Arguments> limits() {
-        return Stream.of(
-                Arguments.of("1", 1), Arguments.of("5", 5),
-                Arguments.of("", 5));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"-1", "2.5", "2147483648"})
-    void rejectsInvalidLimits(String limit) {
-        assertBadLimit(search(port, Map.of("latitude", "52", "longitude", "5", "limit", limit)));
-    }
-
     @ParameterizedTest(name = "invalid {0}={1}")
     @MethodSource("invalidCoordinates")
     void rejectsInvalidCoordinatesWithConsistentProblems(String coordinate, String value) {

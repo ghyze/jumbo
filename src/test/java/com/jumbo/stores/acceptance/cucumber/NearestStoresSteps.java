@@ -31,11 +31,6 @@ public class NearestStoresSteps {
         parameters.put("longitude", longitude);
     }
 
-    @Given("a requested limit of {string}")
-    public void limit(String limit) {
-        parameters.put("limit", limit);
-    }
-
     @Given("the {string} coordinate is omitted")
     public void omittedCoordinate(String coordinate) {
         parameters.remove(coordinate);
@@ -73,11 +68,6 @@ public class NearestStoresSteps {
         assertThat(response.jsonPath().getString("stores[1].id")).isEqualTo(second);
         assertThat(response.jsonPath().getDouble("stores[0].distanceKm")).isCloseTo(0, within(0.0));
         assertThat(response.jsonPath().getDouble("stores[1].distanceKm")).isCloseTo(0, within(0.0));
-    }
-
-    @Then("the response is a bad-limit problem")
-    public void badLimit() {
-        assertBadLimit(response);
     }
 
     @Then("the response is a bad-coordinate problem for {string}")

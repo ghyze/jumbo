@@ -1,7 +1,6 @@
 package com.jumbo.stores.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
@@ -16,7 +15,6 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class StoreServiceTest {
     @Test
@@ -28,7 +26,7 @@ class StoreServiceTest {
         var snapshot = new ArrayList<>(List.of(far, tieB, closest, tieA));
         var service = new StoreService(() -> snapshot, new SearchProperties(5), new HaversineDistance());
 
-        var result = service.findNearest(new Coordinates(0, 0), 5);
+        var result = service.findNearest(new Coordinates(0, 0));
 
         assertThat(result.stores().stream().map(nearest -> nearest.store().id()))
                 .containsExactly("closest", "a", "b", "far");
@@ -50,7 +48,7 @@ class StoreServiceTest {
         };
         var service = new StoreService(() -> List.of(near, far), new SearchProperties(5), calculator);
 
-        var result = service.findNearest(origin, 5);
+        var result = service.findNearest(origin);
 
         assertThat(result.stores().stream().map(nearest -> nearest.store().id()))
                 .containsExactly("far", "near");
@@ -59,11 +57,10 @@ class StoreServiceTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"5,1,1", "5,3,3", "5,5,5", "5,10,5", "5,2147483647,5",
-            "10,3,3", "10,10,10", "10,20,10"})
-    void enforcesRequestedCountAndConfiguredCap(int cap, int requested, int expected) {
+    @CsvSource({"5,5", "10,10"})
+    void usesConfiguredResultCount(int maximum, int expected) {
         var stores = IntStream.range(0, 12).mapToObj(index -> store("store-" + index, 52, 5)).toList();
-        var result = service(stores, cap).findNearest(new Coordinates(52, 5), requested);
+        var result = service(stores, maximum).findNearest(new Coordinates(52, 5));
         assertThat(result.stores()).hasSize(expected);
         assertThat(result.warnings()).isEmpty();
     }
@@ -71,18 +68,18 @@ class StoreServiceTest {
     @Test
     void returnsOnlyAvailableStoresAndHandlesEmptySnapshot() {
         var coordinates = TestObjects.coordinates().build();
-        assertThat(service(List.of(TestObjects.store().build()), 5).findNearest(coordinates, 5).stores()).hasSize(1);
-        var empty = service(List.of(), 5).findNearest(coordinates, 5);
+        assertThat(service(List.of(TestObjects.store().build()), 5).findNearest(coordinates).stores()).hasSize(1);
+        var empty = service(List.of(), 5).findNearest(coordinates);
         assertThat(empty.stores()).isEmpty();
         assertThat(empty.warnings()).isEmpty();
-        var emptyOutside = service(List.of(), 5).findNearest(new Coordinates(0, 0), 5);
+        var emptyOutside = service(List.of(), 5).findNearest(new Coordinates(0, 0));
         assertThat(emptyOutside.warnings().getFirst().code()).isEqualTo(WarningCode.OUTSIDE_SUPPORTED_AREA);
     }
 
     @Test
     void ranksAcrossAntimeridianUsingGeographicRatherThanCoordinateDifference() {
         var result = service(List.of(store("same-side", 0, 170), store("across", 0, -179)), 5)
-                .findNearest(new Coordinates(0, 179), 5);
+                .findNearest(new Coordinates(0, 179));
         assertThat(result.stores().stream().map(nearest -> nearest.store().id()))
                 .containsExactly("across", "same-side");
     }
@@ -90,20 +87,13 @@ class StoreServiceTest {
     @Test
     void sortsUnroundedDistancesBeforeApplyingIdTieBreak() {
         var result = service(List.of(store("a-farther", 0, 1.000000001), store("z-closer", 0, 1)), 5)
-                .findNearest(new Coordinates(0, 0), 1);
+                .findNearest(new Coordinates(0, 0));
         assertThat(result.stores().getFirst().store().id()).isEqualTo("z-closer");
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1, Integer.MIN_VALUE})
-    void rejectsNonpositiveDirectLimits(int limit) {
-        assertThatIllegalArgumentException().isThrownBy(() -> service(List.of(), 5)
-                .findNearest(TestObjects.coordinates().build(), limit));
     }
 
     @Test
     void rejectsNullCoordinates() {
-        assertThatNullPointerException().isThrownBy(() -> service(List.of(), 5).findNearest(null, 5));
+        assertThatNullPointerException().isThrownBy(() -> service(List.of(), 5).findNearest(null));
     }
 
     @ParameterizedTest
@@ -112,7 +102,7 @@ class StoreServiceTest {
             "0, 0", "-90, -180", "90, 180"
     })
     void outsideAnyCoverageEdgeWarnsButStillReturnsStores(double latitude, double longitude) {
-        var result = service(List.of(TestObjects.store().build()), 5).findNearest(new Coordinates(latitude, longitude), 5);
+        var result = service(List.of(TestObjects.store().build()), 5).findNearest(new Coordinates(latitude, longitude));
         assertThat(result.stores()).hasSize(1);
         assertThat(result.warnings()).hasSize(1);
         assertThat(result.warnings().getFirst().code()).isEqualTo(WarningCode.OUTSIDE_SUPPORTED_AREA);

@@ -27,18 +27,11 @@ public class StoreService {
     private final DistanceCalculator distanceCalculator;
 
     public SearchResult findNearest(Coordinates coordinates) {
-        return findNearest(coordinates, properties.maxResults());
-    }
-
-    public SearchResult findNearest(Coordinates coordinates, int limit) {
         Objects.requireNonNull(coordinates, "coordinates");
-        if (limit <= 0) {
-            throw new IllegalArgumentException("limit must be positive");
-        }
         var nearest = repository.findAll().stream()
                 .map(store -> new NearestStore(store, distanceCalculator.between(coordinates, store.coordinates())))
                 .sorted(NEAREST_FIRST)
-                .limit(Math.min(limit, properties.maxResults()))
+                .limit(properties.maxResults())
                 .toList();
         var warnings = CoverageArea.NETHERLANDS.contains(coordinates) ? List.<SearchWarning>of() : List.of(OUTSIDE_COVERAGE);
         return new SearchResult(nearest, warnings);

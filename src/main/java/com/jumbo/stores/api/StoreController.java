@@ -20,10 +20,9 @@ public class StoreController implements StoresApi {
     }
 
     @Override
-    public ResponseEntity<NearestStoresResponse> findNearestStores(
-            Double latitude, Double longitude, Integer limit) {
+    public ResponseEntity<NearestStoresResponse> findNearestStores(Double latitude, Double longitude) {
         var coordinates = new Coordinates(latitude, longitude);
-        var result = limit == null ? service.findNearest(coordinates) : service.findNearest(coordinates, limit);
+        var result = service.findNearest(coordinates);
         var stores = result.stores().stream().map(StoreController::toResponse).toList();
         var warnings = result.warnings().stream()
                 .map(warning -> new ApiWarning(ApiWarning.CodeEnum.fromValue(warning.code().name()), warning.message()))

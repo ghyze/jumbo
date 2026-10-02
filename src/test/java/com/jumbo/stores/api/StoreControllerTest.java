@@ -51,7 +51,7 @@ class StoreControllerTest {
     @Test
     void returnsJsonWithConfiguredDefaultAndServiceOrdering() {
         var controller = controller(3, stores(5));
-        var response = controller.findNearestStores(52.0907, 5.1214, null);
+        var response = controller.findNearestStores(52.0907, 5.1214);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
         var body = response.getBody();
@@ -61,18 +61,9 @@ class StoreControllerTest {
         assertThat(body.getStores().getFirst().getDistanceKm()).isZero();
     }
 
-    @ParameterizedTest
-    @CsvSource({"2, 2", "20, 4"})
-    void delegatesExplicitLimitsToTheService(String limit, int expectedCount) {
-        var body = controller(4, stores(6)).findNearestStores(52.0907, 5.1214, Integer.valueOf(limit)).getBody();
-        assertThat(body).isNotNull();
-        assertThat(body.getStores()).hasSize(expectedCount);
-        assertThat(body.getWarnings()).isEmpty();
-    }
-
     @Test
     void emptyRepositoryReturnsEmptyArrays() {
-        var body = controller(5, List.of()).findNearestStores(52.0, 5.0, null).getBody();
+        var body = controller(5, List.of()).findNearestStores(52.0, 5.0).getBody();
         assertThat(body).isNotNull();
         assertThat(body.getStores()).isEmpty();
         assertThat(body.getWarnings()).isEmpty();
@@ -82,7 +73,7 @@ class StoreControllerTest {
     @CsvSource({"NaN, 5", "Infinity, 5", "-Infinity, 5", "91, 5", "-91, 5",
             "52, NaN", "52, Infinity", "52, -Infinity", "52, 181", "52, -181"})
     void domainCoordinateFailuresBecomeSpecificInputErrors(double latitude, double longitude) {
-        assertThatThrownBy(() -> controller(5, stores(1)).findNearestStores(latitude, longitude, null))
+        assertThatThrownBy(() -> controller(5, stores(1)).findNearestStores(latitude, longitude))
                 .isInstanceOf(InvalidCoordinatesException.class);
     }
 
@@ -92,7 +83,7 @@ class StoreControllerTest {
         var properties = new SearchProperties(5);
         var service = new StoreService(() -> { throw failure; }, properties, new HaversineDistance());
         var controller = new StoreController(service);
-        assertThatIllegalArgumentException().isThrownBy(() -> controller.findNearestStores(52.0, 5.0, null))
+        assertThatIllegalArgumentException().isThrownBy(() -> controller.findNearestStores(52.0, 5.0))
                 .isSameAs(failure);
     }
 

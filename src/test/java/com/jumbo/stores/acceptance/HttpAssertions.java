@@ -86,10 +86,6 @@ public final class HttpAssertions {
         assertBadParameter(response, parameter);
     }
 
-    public static void assertBadLimit(Response response) {
-        assertBadParameter(response, "limit");
-    }
-
     private static Number number(Map<String, Object> store, String field) {
         assertThat(store.get(field)).as(field).isInstanceOf(Number.class);
         return (Number) store.get(field);

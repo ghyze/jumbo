@@ -18,23 +18,22 @@ Proposed endpoint:
 
 ```http
 GET /api/stores/nearest?latitude=52.0907&longitude=5.1214
-GET /api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=10
 ```
 
 - Require both query parameters as numeric values: latitude in `[-90, 90]`, longitude in `[-180, 180]`, inclusive. Reject missing, blank, nonnumeric, non-finite, and out-of-range values with `400 Bad Request`.
 - Configure `stores.search.max-results` at application level, defaulting to `5`. This single setting is both the default result count and the maximum any request can return. Bind it through validated Spring configuration properties; an explicitly invalid setting (blank, nonnumeric, fractional, nonpositive, or beyond the supported Java integer range) must fail startup clearly, not silently reset to five.
-- Accept an optional `limit` query parameter. **Revised decision:** invalid supplied limits are now `400 Bad Request` instead of falling back with `INVALID_LIMIT_DEFAULTED`; treating invalid client input as an error is simpler to defend and removes the forgiving parser/warning path. Omitted or blank limit uses the configured count. A valid positive integer below the configured count reduces the result count; one above it is capped at the configured count.
-- Return `200 OK` with a JSON object containing a `stores` array, ordered by increasing straight-line distance, and a `warnings` array. Return `min(effective limit, available stores)` results. Omission and ordinary capping need no warning. The warnings array is empty when the coverage warning does not apply.
+- Do not expose a result-count query parameter. The brief asks for the five nearest stores; the count is configurable only through `stores.search.max-results`. This supersedes the forgiving result-count design in this section and the earlier strict-input reversal.
+- Return `200 OK` with a JSON object containing a `stores` array, ordered by increasing straight-line distance, and a `warnings` array. Return up to the configured count, reduced only when fewer stores are available. The warnings array is empty when the coverage warning does not apply.
 - For mathematically valid coordinates outside the approximate Netherlands coverage box described below, still return nearest stores with a structured warning containing code `OUTSIDE_SUPPORTED_AREA` and a human-readable message explaining that the dataset covers the Netherlands and results may be far away. This is a non-blocking coverage warning, not a `400`, a server-log-only warning, or a guarantee about distance to a store.
 - Each result exposes `id` (the seed's `uuid`), `addressName`, `city`, `postalCode`, `street`, `street2`, `street3`, numeric `latitude` and `longitude`, and numeric `distanceKm`. Preserve the seed's separate address components rather than guessing a combined house-number format. Normalize absent optional address components to empty strings and document this in the schema.
 - Calculate distance using the Haversine formula with a documented mean Earth radius of 6,371.0088 km. This is geographic distance, not driving distance or travel time.
 - Rank using unrounded distances, breaking exact ties by store ID for deterministic output. Return the computed distance without presentation rounding; clients may format it.
-- Specify required response properties, global coordinate bounds, nonnegative distances, and the warnings schema. Describe `limit` as an optional positive integer query parameter. Let framework binding reject malformed input as `400`, while omitted or blank values use the runtime-configured default/cap (five out of the box). Include examples for omission, lower/capped counts, invalid-limit errors, geographic warnings, and errors.
+- Specify required response properties, global coordinate bounds, nonnegative distances, and the warnings schema. Include examples for the configured count, smaller datasets, geographic warnings, and errors.
 - Use one documented `application/problem+json` error shape with `type`, `title`, `status`, `detail`, and `instance`. Return actionable validation messages without stack traces or internal implementation details. Unexpected failures produce `500` and are logged server-side.
 
 Treat every entry in the supplied `stores` array as a candidate. Do not introduce an undocumented filter based on opening hours, collection-point status, or location type.
 
-With `stores.search.max-results=5` and sufficient stores, omitted, invalid, `5`, or `10` limits all return five stores; `limit=3` returns three. With the setting changed to `10`, omission/invalid input returns ten, `limit=3` returns three, and `limit=20` returns ten. Fewer available stores always reduce the actual result count.
+With `stores.search.max-results=5` and sufficient stores, requests return five stores. With the setting changed to `10`, requests return ten. Fewer available stores always reduce the actual result count.
 
 The cap bounds response size, not request frequency or the cost of the initial full distance scan. It is a useful abuse safeguard, but not comprehensive denial-of-service protection; rate limiting and infrastructure-level request controls remain outside this assignment.
 
@@ -54,7 +53,7 @@ HTTP request
   -> StoreService
   -> StoreRepository
   -> JsonStoreRepository's immutable in-memory snapshot
-  -> StoreService calculates, sorts, selects up to limit, and evaluates coverage
+  -> StoreService calculates, sorts, selects the configured count, and evaluates coverage
   -> StoreController maps results to generated response models
   -> HTTP response
 
@@ -99,9 +98,9 @@ If adopted later, keep MapStruct interfaces at the boundaries, use Spring compon
 
 ### Service
 
-- Accept a `Coordinates` object and a resolved positive result limit, enforce the configured maximum in the service as well, read the snapshot through the repository interface, calculate each distance once, sort by distance then ID, and take up to the effective count. Produce the coverage warning independently of the count.
+- Accept a `Coordinates` object, enforce the configured maximum in the service, read the snapshot through the repository interface, calculate each distance once, sort by distance then ID, and take up to the configured count. Produce the coverage warning independently of the count.
 - Put the Haversine calculation in a small independently testable class. Use radians consistently and clamp the intermediate Haversine value to `[0, 1]` to prevent floating-point errors near antipodal positions.
-- Enforce coordinate validity through `Coordinates` construction and positive/capped limits for direct service calls too, rather than relying solely on generated HTTP validation. The service owns the configured default and cap; framework validation rejects invalid HTTP limits. Direct invalid domain arguments remain programming errors.
+- Enforce coordinate validity through `Coordinates` construction rather than relying solely on generated HTTP validation. The service owns the configured default and cap. Direct invalid domain arguments remain programming errors.
 - Use a full scan and sort: `O(n log n)` time and `O(n)` temporary space are appropriate for 587 stores. Avoid a heap, geospatial library, or index unless requirements change.
 - Naturally return zero to the requested number of results for small repository snapshots, even though the production loader rejects an empty seed file.
 
@@ -109,15 +108,15 @@ If adopted later, keep MapStruct interfaces at the boundaries, use Spring compon
 
 The initial full scan is deliberately simple, not the only viable approach. If the dataset or request volume grows, benchmark before changing it:
 
-- A bounded max-heap can reduce ranking to `O(n log k)` with `O(k)` selection space for `k` requested results, but still calculates every distance.
+- A bounded max-heap can reduce ranking to `O(n log k)` with `O(k)` selection space for `k` configured results, but still calculates every distance.
 - To avoid calculating all distances, build a suitable spatial index once at startup or later use a geospatial database repository. Use geographically correct candidate pruning (for example, a spherical nearest-neighbor index), followed by exact Haversine ranking. Preserve correctness near the antimeridian/poles and deterministic ID tie-breaking; naive latitude/longitude proximity or a fixed-radius prefilter can omit the actual nearest stores.
-- Compare optimized results with the exhaustive baseline across varied coordinates and limits, and measure latency/memory before accepting added complexity. These are future improvements, not initial acceptance requirements.
+- Compare optimized results with the exhaustive baseline across varied coordinates and configured counts, and measure latency/memory before accepting added complexity. These are future improvements, not initial acceptance requirements.
 
 ### REST controller and errors
 
 - Generate Spring API interfaces and request/response models; implement the generated interface in a handwritten `@RestController`. Generation defines the contract, not business logic or repository access.
 - Keep the controller limited to input conversion, service delegation, and response/warning mapping.
-- Pass an optional validated integer `limit` to the service. Omitted or blank limit uses the configured default; malformed, fractional, nonpositive, or out-of-range values are `400` client errors.
+- Pass only coordinates to the service; the service uses the configured count.
 - Add Bean Validation support and ensure interface annotations are actually enforced by Spring MVC. Handle binding failures, missing parameters, validation failures, and domain coordinate errors consistently using Spring's exception-handling conventions.
 - Log successful dataset loading with the store count, and log unexpected server failures. Avoid noisy per-store or per-request logging.
 - Retain the existing Actuator dependency and minimal health endpoint; do not add a monitoring platform or expose sensitive management endpoints.
@@ -141,12 +140,12 @@ Prefer real objects and the real JSON repository with small fixtures. Where serv
 
 | Layer | Tools and setup | Coverage |
 | --- | --- | --- |
-| Unit | JUnit Jupiter with real objects and `TestObjects` builders | Identical points, known distances within tolerance, symmetry, antimeridian/polar/antipodal cases, finite results, coordinate value-object validation, coverage-box edges, default/capped limit handling, explicit model mappings |
+| Unit | JUnit Jupiter with real objects and `TestObjects` builders | Identical points, known distances within tolerance, symmetry, antimeridian/polar/antipodal cases, finite results, coordinate value-object validation, coverage-box edges, configured count handling, explicit model mappings |
 | Configuration | Focused Spring context tests | Default maximum of five, override to ten, invalid configuration fails startup |
-| Service unit | JUnit with real fixture-backed repository or small in-memory fake | Correct nearest IDs, configured maximum enforced even for direct calls, smaller counts, invalid domain limits, ascending distance, deterministic ties, small/empty results, coverage warnings, no mutation |
+| Service unit | JUnit with real fixture-backed repository or small in-memory fake | Correct nearest IDs, configured maximum enforced, ascending distance, deterministic ties, small/empty results, coverage warnings, no mutation |
 | Repository | JUnit with small JSON fixtures and an observable resource | Actual root structure, string coordinates, ignored metadata, immutable results, one-time reads, and all startup rejection cases |
-| HTTP endpoint | REST Assured against `@SpringBootTest(webEnvironment = RANDOM_PORT)` | Actual HTTP status/content type/schema fields, numeric coordinates/distances, default five and configuration override to ten, smaller/capped counts, omitted and blank limits, invalid-limit 400s (text/fractional/zero/negative/out-of-range), ordering, missing/blank/malformed/non-finite/out-of-range coordinates, inclusive bounds, consistent problem responses |
-| Integration acceptance | Cucumber + Spring Boot random-port server + REST Assured steps | Complete request-to-JSON-repository path, default nearest-five scenario, smaller requested count, application cap and invalid-limit errors, exact store location, tie ordering, fewer available stores, out-of-coverage warning with results, invalid coordinates |
+| HTTP endpoint | REST Assured against `@SpringBootTest(webEnvironment = RANDOM_PORT)` | Actual HTTP status/content type/schema fields, numeric coordinates/distances, default five and configuration override to ten, smaller datasets, ordering, missing/blank/malformed/non-finite/out-of-range coordinates, inclusive bounds, consistent problem responses |
+| Integration acceptance | Cucumber + Spring Boot random-port server + REST Assured steps | Complete request-to-JSON-repository path, default nearest-five scenario, exact store location, tie ordering, fewer available stores, out-of-coverage warning with results, invalid coordinates |
 
 For Cucumber, use a deterministic JSON fixture through the real repository loader, not a mocked service or repository. Configure test-only resource selection without adding a public runtime feature solely for tests. Keep scenarios focused on acceptance behavior; leave exhaustive mathematical and validation combinations to JUnit.
 
@@ -170,14 +169,14 @@ Commands on macOS (Terminal):
 
 ## 5. Manual testing and reviewer documentation
 
-Add `http/stores.http` with IntelliJ HTTP Client requests and a local `baseUrl` variable. Include omitted/smaller/capped result counts, invalid limits returning the configured count with a warning, a search at a known store location, a missing coordinate parameter, nonnumeric coordinates, globally invalid coordinates, and valid coordinates outside the coverage box. Add simple client assertions for status, result count, ordering, and warnings where useful. Document the assumed application cap and how to rerun after overriding it. The same HTTP file should work on Windows and macOS.
+Add `http/stores.http` with IntelliJ HTTP Client requests and a local `baseUrl` variable. Include the configured result count, a search at a known store location, a missing coordinate parameter, nonnumeric coordinates, globally invalid coordinates, and valid coordinates outside the coverage box. Add simple client assertions for status, result count, ordering, and warnings where useful. Document the assumed application cap and how to rerun after overriding it. The same HTTP file should work on Windows and macOS.
 
 Expand `README.md` with:
 
 - JDK 27 prerequisites and Windows/macOS wrapper commands for generating/building, testing, and running; no globally installed Maven, database, or container runtime required. Document `JAVA_HOME` selection for the required JDK.
 - Development startup via `.\mvnw.cmd spring-boot:run` on Windows or `./mvnw spring-boot:run` on macOS; packaged startup via `java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar` on Windows or `java -jar target/nearest-stores-0.0.1-SNAPSHOT.jar` on macOS, plus copyable sample requests.
 - How to run the IntelliJ HTTP file and both automated test stages.
-- API/specification location, `stores.search.max-results` (default/cap five), and how to override it through application YAML or the Spring command-line argument `--stores.search.max-results=10`. Explain request capping and invalid-limit errors separately from invalid-coordinate errors. Document the coverage box and non-blocking warnings, distance units/formula, tie-breaking, startup loading, and resource packaging.
+- API/specification location, `stores.search.max-results` (default/cap five), and how to override it through application YAML or the Spring command-line argument `--stores.search.max-results=10`. Explain configured result counts separately from invalid-coordinate errors. Document the coverage box and non-blocking warnings, distance units/formula, tie-breaking, startup loading, and resource packaging.
 - Architecture and intentional trade-offs: in-memory read-only data, restart for updates, geographic rather than road distance, small-data full sorting, future optimization options, and exclusions.
 - Actual approximate effort spent and a truthful account of AI assistance, how its output was validated, and any suggestions rejected or changed. Record actual experience, not invented estimates or disagreements.
 
@@ -203,7 +202,7 @@ Use this sequence as an ordering of work, not a time estimate. Do not attach spe
 
 - A clean Maven Wrapper build generates the contract, compiles, and executes the intended test layers.
 - The packaged application loads the supplied JSON once and requires no external service or checkout-relative file access.
-- Results are deterministic and never exceed the configured application maximum (five by default) or available stores. Smaller valid requested limits are honored; omitted/blank limits use the configured count, while invalid supplied limits return 400. Invalid coordinates retain documented error responses; valid out-of-coverage coordinates return results plus a warning.
+- Results are deterministic and never exceed the configured application maximum (five by default) or available stores. Invalid coordinates retain documented error responses; valid out-of-coverage coordinates return results plus a warning.
 - Coordinates remain paired in a shared validated value object; tests use builders and real objects/small fakes in preference to mocks.
 - The handwritten controller, service, and repository retain the defined boundaries.
 - The README and IntelliJ requests let a reviewer build, start, and exercise the application on Windows or macOS without Docker or a UI, with actual cross-platform checks recorded.

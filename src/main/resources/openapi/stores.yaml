@@ -25,8 +25,9 @@ paths:
       description: |
         Return nearest-store entries sorted by increasing distance, then ID for exact
         ties. All seed stores are candidates regardless of opening hours,
-        collection-point status, or location type. Warnings never change a
-        successful response's status.
+        collection-point status, or location type. The configured maximum result
+        count is used for every request. Warnings never change a successful
+        response's status.
 
         Examples below use an illustrative three-store dataset to keep responses
         concise; the production dataset has more stores.
@@ -55,26 +56,6 @@ paths:
             minimum: -180
             maximum: 180
           example: 5.1214
-        - name: limit
-          in: query
-          required: false
-          description: |
-            Optional positive integer result count. Omission uses the configured
-            count (five out of the box). An empty value is treated like omission.
-            Values above stores.search.max-results are capped silently.
-            Nonnumeric, fractional, zero, negative, or integer values beyond the
-            supported 32-bit range return 400.
-          schema:
-            type: integer
-            format: int32
-            minimum: 1
-          examples:
-            lower:
-              summary: Return at most two stores
-              value: 2
-            capped:
-              summary: Capped at the configured maximum
-              value: 20
       responses:
         '200':
           description: Nearest stores and any non-blocking warnings.
@@ -83,8 +64,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/NearestStoresResponse'
               examples:
-                omittedLimit:
-                  summary: Omitted limit; illustrative dataset smaller than configured count
+                nearestStores:
+                  summary: Illustrative dataset smaller than the configured count
                   value:
                     stores:
                       - &firstStore
@@ -121,18 +102,8 @@ paths:
                         longitude: 5.1214
                         distanceKm: 2.223901604671309
                     warnings: []
-                lowerLimit:
-                  summary: limit=2 returns two stores
-                  value:
-                    stores: [*firstStore, *secondStore]
-                    warnings: []
-                cappedLimit:
-                  summary: limit=20 is capped at five; three stores are available
-                  value:
-                    stores: [*firstStore, *secondStore, *thirdStore]
-                    warnings: []
                 outsideCoverage:
-                  summary: Valid position (0, 0), limit=1; non-blocking coverage warning
+                  summary: Valid position (0, 0); non-blocking coverage warning
                   value:
                     stores:
                       - &farStore
@@ -146,6 +117,10 @@ paths:
                         latitude: 52.0907
                         longitude: 5.1214
                         distanceKm: 5812.0124353538
+                      - <<: *secondStore
+                        distanceKm: 5813.0124353538
+                      - <<: *thirdStore
+                        distanceKm: 5814.0124353538
                     warnings:
                       - &coverageWarning
                         code: OUTSIDE_SUPPORTED_AREA
@@ -177,13 +152,6 @@ paths:
                     title: Bad Request
                     status: 400
                     detail: Query parameter 'longitude' must be a number between -180 and 180.
-                    instance: /api/stores/nearest
-                invalidLimit:
-                  value:
-                    type: about:blank
-                    title: Bad Request
-                    status: 400
-                    detail: Query parameter 'limit' must be a positive integer.
                     instance: /api/stores/nearest
         '500':
           description: Unexpected server failure; diagnostic details are logged server-side.

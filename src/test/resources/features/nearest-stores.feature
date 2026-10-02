@@ -1,5 +1,5 @@
 Feature: Find nearest stores from the JSON snapshot
-  Customers can find nearby stores with a bounded result count.
+  Customers can find nearby stores with the configured result count.
   Results are geographic distances, and coverage warnings do not block searches.
 
   Background:
@@ -10,27 +10,6 @@ Feature: Find nearest stores from the JSON snapshot
     Then 5 stores are returned without warnings
     And the first 5 fixture stores are in nearest-first ID-tie order
     And the colocated stores "store-a" and "store-b" come first with zero distance
-
-  Scenario Outline: A requested limit of <limit> returns <count> stores up to the application cap
-    Given a requested limit of "<limit>"
-    When the nearest stores are requested over HTTP
-    Then <count> stores are returned without warnings
-    And the first <count> fixture stores are in nearest-first ID-tie order
-
-    Examples:
-      | limit | count |
-      | 3     | 3     |
-      | 20    | 5     |
-
-  Scenario Outline: Invalid supplied limit <limit> is rejected
-    Given a requested limit of "<limit>"
-    When the nearest stores are requested over HTTP
-    Then the response is a bad-limit problem
-
-    Examples:
-      | limit |
-      | many  |
-      | 0     |
 
   Scenario: A position outside coverage still finds stores
     Given a search position at latitude "0" and longitude "0"

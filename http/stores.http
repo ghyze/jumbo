@@ -17,48 +17,14 @@ Accept: application/json
     });
 %}
 
-### Request fewer results
-GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=3
-Accept: application/json
-
-> {%
-    client.test("Smaller count is honored", function () {
-        client.assert(response.status === 200, "Expected HTTP 200");
-        client.assert(response.body.stores.length === 3, "Smaller result count");
-        client.assert(response.body.warnings.length === 0, "No warning for smaller count");
-    });
-%}
-
-### Request above the configured cap
-GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=20
-Accept: application/json
-
-> {%
-    client.test("Larger count is capped silently", function () {
-        client.assert(response.status === 200, "Expected HTTP 200");
-        client.assert(response.body.stores.length === Number(request.variables.get("configuredMax")), "Configured cap applies");
-        client.assert(response.body.warnings.length === 0, "No warning for silent capping");
-    });
-%}
-
-### Invalid limit returns 400
-GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=invalid
-Accept: application/json, application/problem+json
-
-> {%
-    client.test("Invalid limit is rejected", function () {
-        client.assert(response.status === 400, "Expected HTTP 400");
-        client.assert(response.body.detail === "Query parameter 'limit' must be a positive integer.", "Problem names limit");
-    });
-%}
-
 ### Exact known store location
-GET {{baseUrl}}/api/stores/nearest?latitude=51.778461&longitude=4.615551&limit=1
+GET {{baseUrl}}/api/stores/nearest?latitude=51.778461&longitude=4.615551
 Accept: application/json
 
 > {%
     client.test("Exact store location ranks first", function () {
         client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.stores.length === Number(request.variables.get("configuredMax")), "Configured count");
         client.assert(response.body.stores[0].id === "EOgKYx4XFiQAAAFJa_YYZ4At", "Expected known store");
         client.assert(response.body.stores[0].distanceKm === 0, "Distance at same location is zero");
         client.assert(response.body.warnings.length === 0, "No warning at known store");

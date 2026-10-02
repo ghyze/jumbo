@@ -20,7 +20,7 @@ class StoreConfigurationTest {
                     assertThat(context).hasSingleBean(DistanceCalculator.class);
                     assertThat(context.getBean(DistanceCalculator.class)).isInstanceOf(HaversineDistance.class);
                     var result = context.getBean(StoreService.class)
-                            .findNearest(TestObjects.coordinates().build(), 5);
+                            .findNearest(TestObjects.coordinates().build());
                     assertThat(result.stores()).hasSize(5);
                     assertThat(result.warnings()).isEmpty();
                     for (int index = 1; index < result.stores().size(); index++) {
