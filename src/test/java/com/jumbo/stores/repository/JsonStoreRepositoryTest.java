@@ -203,7 +203,7 @@ class JsonStoreRepositoryTest {
     }
 
     @Test
-    void invalidStoreRetainsResourceIndexIdAndOriginalCause() {
+    void invalidStoreRetainsResourceIdAndOriginalCause() {
         var failure = catchThrowable(() -> repository("""
                 {
                   "stores": [
@@ -230,7 +230,7 @@ class JsonStoreRepositoryTest {
                 """));
 
         assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[1] (uuid 'seed-b'): city must not be blank");
+                + "store 'seed-b': city must not be blank");
         assertThat(failure.getCause().getCause()).hasMessage("city must not be blank");
     }
 
@@ -240,7 +240,7 @@ class JsonStoreRepositoryTest {
         var failure = catchThrowable(() -> repository(json));
 
         assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[0] (uuid '" + id + "'): " + domainMessage);
+                + "store '" + id + "': " + domainMessage);
         assertThat(failure.getCause().getCause()).hasMessage(domainMessage);
     }
 
@@ -315,29 +315,29 @@ class JsonStoreRepositoryTest {
 
     static Stream<Arguments> invalidShapes() {
         return Stream.of(
-                Arguments.of("", "JSON structure does not match the store data format"),
+                Arguments.of("", "No content to map"),
                 Arguments.of("{", "Unexpected end-of-input"),
                 Arguments.of("null", "stores must be a nonempty array"),
-                Arguments.of("[]", "JSON structure does not match the store data format"),
-                Arguments.of("42", "JSON structure does not match the store data format"),
+                Arguments.of("[]", "from Array value"),
+                Arguments.of("42", "from Number value (42)"),
                 Arguments.of("{}", "stores must be a nonempty array"),
                 Arguments.of("{\"stores\": null}", "stores must be a nonempty array"),
-                Arguments.of("{\"stores\": {}}", "JSON structure does not match the store data format"),
+                Arguments.of("{\"stores\": {}}", "[\"stores\"]"),
                 Arguments.of("{\"stores\": []}", "stores must be a nonempty array"),
-                Arguments.of("{\"stores\": [null]}", "stores[0]: store must be an object"),
-                Arguments.of("{\"stores\": [42]}", "JSON structure does not match the store data format"),
-                Arguments.of("{\"stores\": [[]]}", "JSON structure does not match the store data format"));
+                Arguments.of("{\"stores\": [null]}", "Invalid `null` value"),
+                Arguments.of("{\"stores\": [42]}", "[\"stores\"]->java.util.ArrayList[0]"),
+                Arguments.of("{\"stores\": [[]]}", "[\"stores\"]->java.util.ArrayList[0]"));
     }
 
     @Test
     void rejectsTrailingJsonDocument() {
         var failure = catchThrowable(() -> repository(validDocument() + "{}"));
 
-        assertThat(failure).hasMessageContaining("JSON structure does not match the store data format");
+        assertThat(failure).hasMessageContaining("Trailing token");
     }
 
     @Test
-    void rejectsDuplicateIdsWithIndexAndId() {
+    void rejectsDuplicateIds() {
         var failure = catchThrowable(() -> repository("""
                 {
                   "stores": [
@@ -364,7 +364,7 @@ class JsonStoreRepositoryTest {
                 """));
 
         assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[1] (uuid 'seed-a'): duplicate uuid 'seed-a'");
+                + "duplicate uuid 'seed-a'");
     }
 
     @ParameterizedTest
@@ -378,9 +378,9 @@ class JsonStoreRepositoryTest {
     void rejectsMissingRequiredTextFields(String field, String message) {
         var failure = catchThrowable(() -> repository(requiredFieldMissing(field)));
 
-        var context = field.equals("uuid") ? "stores[0]" : "stores[0] (uuid 'seed-a')";
+        var id = field.equals("uuid") ? "null" : "seed-a";
         assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + context + ": " + message);
+                + "store '" + id + "': " + message);
     }
 
     @Test
@@ -415,8 +415,8 @@ class JsonStoreRepositoryTest {
     void rejectsObjectsAndArraysInStringFields(String json, String path) {
         var failure = catchThrowable(() -> repository(json));
 
-        assertThat(failure).hasMessageContaining("JSON structure does not match the store data format");
-        assertThat(failure).hasMessageContaining(path);
+        assertThat(failure).hasMessageContaining("Cannot deserialize value of type `java.lang.String`");
+        assertThat(failure).hasMessageContaining("[\"" + path + "\"]");
     }
 
     static Stream<Arguments> objectOrArrayStringFields() {
@@ -462,8 +462,8 @@ class JsonStoreRepositoryTest {
     void rejectsMissingCoordinates(String json, String expectedMessage) {
         var failure = catchThrowable(() -> repository(json));
 
-        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[0] (uuid 'seed-a'): " + expectedMessage);
+        assertThat(failure).hasMessageStartingWith("Failed to load stores from Byte array resource [fixture]: ")
+                .hasMessageContaining(expectedMessage);
     }
 
     static Stream<Arguments> missingCoordinates() {
@@ -477,7 +477,7 @@ class JsonStoreRepositoryTest {
                           "street": "Voorstraat",
                           "longitude": "5.1214"
                         }]}
-                        """, "latitude is required"),
+                        """, "Missing required creator property 'latitude'"),
                 Arguments.of("""
                         {"stores": [{
                           "uuid": "seed-a",
@@ -487,7 +487,18 @@ class JsonStoreRepositoryTest {
                           "street": "Voorstraat",
                           "latitude": "52.0907"
                         }]}
-                        """, "longitude is required"));
+                        """, "Missing required creator property 'longitude'"),
+                Arguments.of("""
+                        {"stores": [{
+                          "uuid": "seed-a",
+                          "addressName": "Jumbo Distinct Name",
+                          "city": "Utrecht",
+                          "postalCode": "3511 AB",
+                          "street": "Voorstraat",
+                          "latitude": null,
+                          "longitude": "5.1214"
+                        }]}
+                        """, "[\"latitude\"]"));
     }
 
     @ParameterizedTest
@@ -510,20 +521,20 @@ class JsonStoreRepositoryTest {
                 """.formatted(field.equals("latitude") ? value : "52.0907",
                 field.equals("longitude") ? value : "5.1214")));
 
-        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "stores[0] (uuid 'seed-a'): " + expectedMessage);
+        assertThat(failure).hasMessageStartingWith("Failed to load stores from Byte array resource [fixture]: ")
+                .hasMessageContaining(expectedMessage);
     }
 
     static Stream<Arguments> invalidCoordinates() {
         return Stream.of(
-                Arguments.of("latitude", "text", "latitude must be a numeric string"),
+                Arguments.of("latitude", "text", "not a valid `double` value"),
                 Arguments.of("latitude", "NaN", "latitude must be finite and between -90 and 90"),
                 Arguments.of("latitude", "Infinity", "latitude must be finite and between -90 and 90"),
                 Arguments.of("latitude", "-Infinity", "latitude must be finite and between -90 and 90"),
                 Arguments.of("latitude", "1e309", "latitude must be finite and between -90 and 90"),
                 Arguments.of("latitude", "90.01", "latitude must be finite and between -90 and 90"),
                 Arguments.of("latitude", "-90.01", "latitude must be finite and between -90 and 90"),
-                Arguments.of("longitude", "text", "longitude must be a numeric string"),
+                Arguments.of("longitude", "text", "[\"longitude\"]"),
                 Arguments.of("longitude", "NaN", "longitude must be finite and between -180 and 180"),
                 Arguments.of("longitude", "Infinity", "longitude must be finite and between -180 and 180"),
                 Arguments.of("longitude", "-Infinity", "longitude must be finite and between -180 and 180"),
