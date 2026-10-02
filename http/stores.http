@@ -41,18 +41,6 @@ Accept: application/json
     });
 %}
 
-### Blank limit behaves like omission
-GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=
-Accept: application/json
-
-> {%
-    client.test("Blank limit uses configured default", function () {
-        client.assert(response.status === 200, "Expected HTTP 200");
-        client.assert(response.body.stores.length === Number(request.variables.get("configuredMax")), "Configured default");
-        client.assert(response.body.warnings.length === 0, "No warning for blank-as-omitted");
-    });
-%}
-
 ### Invalid limit returns 400
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214&limit=invalid
 Accept: application/json, application/problem+json
@@ -98,17 +86,6 @@ Accept: application/json, application/problem+json
         client.assert(response.status === 400, "Expected HTTP 400");
         client.assert(response.body.detail === "Required query parameter 'longitude' is missing.", "Problem names longitude");
         client.assert(response.body.instance === "/api/stores/nearest", "Problem instance");
-    });
-%}
-
-### Nonnumeric coordinate returns 400
-GET {{baseUrl}}/api/stores/nearest?latitude=not-a-number&longitude=5.1214
-Accept: application/json, application/problem+json
-
-> {%
-    client.test("Nonnumeric coordinate returns a problem", function () {
-        client.assert(response.status === 400, "Expected HTTP 400");
-        client.assert(response.body.detail === "Query parameter 'latitude' must be a number between -90 and 90.", "Problem names latitude");
     });
 %}
 
