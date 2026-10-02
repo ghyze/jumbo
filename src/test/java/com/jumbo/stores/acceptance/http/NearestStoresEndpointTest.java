@@ -1,6 +1,6 @@
 package com.jumbo.stores.acceptance.http;
 
-import static com.jumbo.stores.acceptance.HttpAssertions.*;
+import static com.jumbo.stores.acceptance.NearestStoresApi.*;
 import com.jumbo.stores.NearestStoresApplication;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,7 +30,7 @@ class NearestStoresEndpointTest {
         } else {
             query.put(coordinate, value);
         }
-        assertBadCoordinates(search(port, query), coordinate);
+        assertBadParameter(search(port, query), coordinate);
     }
 
     static Stream<Arguments> invalidCoordinates() {
@@ -48,7 +48,7 @@ class NearestStoresEndpointTest {
 
     @Test
     void rejectsBothMissingCoordinates() {
-        assertBadCoordinates(search(port, Map.of()), "latitude");
+        assertBadParameter(search(port, Map.of()), "latitude");
     }
 
     @ParameterizedTest

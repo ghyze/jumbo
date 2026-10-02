@@ -1,6 +1,6 @@
 package com.jumbo.stores.acceptance.http;
 
-import static com.jumbo.stores.acceptance.HttpAssertions.*;
+import static com.jumbo.stores.acceptance.NearestStoresApi.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import com.jumbo.stores.NearestStoresApplication;
 import com.jumbo.stores.repository.StoreRepository;

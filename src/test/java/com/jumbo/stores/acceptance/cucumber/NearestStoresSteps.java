@@ -1,6 +1,6 @@
 package com.jumbo.stores.acceptance.cucumber;
 
-import static com.jumbo.stores.acceptance.HttpAssertions.*;
+import static com.jumbo.stores.acceptance.NearestStoresApi.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import io.cucumber.java.Before;
@@ -62,6 +62,6 @@ public class NearestStoresSteps {
 
     @Then("the response is a bad-coordinate problem for {string}")
     public void badCoordinates(String parameter) {
-        assertBadCoordinates(response, parameter);
+        assertBadParameter(response, parameter);
     }
 }

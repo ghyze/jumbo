@@ -9,13 +9,13 @@ import io.restassured.response.Response;
 import java.util.List;
 import java.util.Map;
 
-public final class HttpAssertions {
+public final class NearestStoresApi {
     public static final String PATH = "/api/stores/nearest";
     public static final List<String> ORDERED_IDS = List.of(
             "store-a", "store-b", "store-c", "store-d", "store-e", "store-f",
             "store-g", "store-h", "store-i", "store-j", "store-k", "store-l");
 
-    private HttpAssertions() {
+    private NearestStoresApi() {
     }
 
     public static Response search(int port, Map<String, ?> parameters) {
@@ -58,22 +58,12 @@ public final class HttpAssertions {
     public static void assertBadParameter(Response response, String parameter) {
         response.then().statusCode(400).contentType("application/problem+json");
         Map<String, Object> body = response.jsonPath().getMap("$");
-        assertThat(body).containsKeys("type", "title", "status", "detail", "instance");
-        assertThat(body.get("type")).isEqualTo("about:blank");
-        assertThat(body.get("title")).isEqualTo("Bad Request");
-        assertThat(body.get("status")).isEqualTo(400);
-        assertThat(body.get("instance")).isEqualTo(PATH);
-        assertThat(body.get("detail")).isInstanceOf(String.class);
-        String detail = (String) body.get("detail");
-        assertThat(detail).isNotBlank();
-        assertThat(detail.contains("'" + parameter + "'") || detail.toLowerCase().contains(parameter))
-                .as("Problem detail should identify the invalid parameter: %s", detail)
-                .isTrue();
-        assertThat(body).doesNotContainKeys("trace", "exception");
-    }
-
-    public static void assertBadCoordinates(Response response, String parameter) {
-        assertBadParameter(response, parameter);
+        assertThat(body).containsOnlyKeys("type", "title", "status", "detail", "instance")
+                .containsEntry("type", "about:blank")
+                .containsEntry("title", "Bad Request")
+                .containsEntry("status", 400)
+                .containsEntry("instance", PATH);
+        assertThat(body.get("detail")).asString().containsIgnoringCase("query parameter '" + parameter + "'");
     }
 
     private static Number number(Map<String, Object> store, String field) {

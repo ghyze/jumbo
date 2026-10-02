@@ -1,6 +1,6 @@
 package com.jumbo.stores.acceptance.http;
 
-import static com.jumbo.stores.acceptance.HttpAssertions.*;
+import static com.jumbo.stores.acceptance.NearestStoresApi.*;
 import com.jumbo.stores.NearestStoresApplication;
 import io.restassured.response.Response;
 import java.util.Map;
