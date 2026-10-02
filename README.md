@@ -70,7 +70,13 @@ The OpenAPI source is [`src/main/resources/openapi/stores.yaml`](src/main/resour
 
 ## Manual requests
 
-Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. It covers default count, outside-coverage, missing-coordinate, invalid-coordinate, known-store, and health requests. Minimal operational health is available at `/actuator/health`.
+Open [`http/stores.http`](http/stores.http) in IntelliJ and run individual requests. It covers default count, outside-coverage, missing-coordinate, invalid-coordinate, known-store, and health requests. Each request also has an equivalent `curl` command in a comment, for use without IntelliJ. For example:
+
+```shell
+curl -i "http://localhost:8080/api/stores/nearest?latitude=52.0907&longitude=5.1214"
+```
+
+On Windows PowerShell 5, type `curl.exe` instead of `curl`, because `curl` is an alias for `Invoke-WebRequest` there. Minimal operational health is available at `/actuator/health`.
 
 ## Tests
 

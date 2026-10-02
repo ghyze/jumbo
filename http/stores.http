@@ -1,6 +1,10 @@
+# Each request has an equivalent curl command in a comment for use outside IntelliJ.
+# On Windows PowerShell 5, use curl.exe instead of curl (curl is an alias there).
+
 @baseUrl = http://localhost:8080
 
 ### Default count and ascending distances
+# curl -i "http://localhost:8080/api/stores/nearest?latitude=52.0907&longitude=5.1214"
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907&longitude=5.1214
 Accept: application/json
 
@@ -16,6 +20,7 @@ Accept: application/json
 %}
 
 ### Exact known store location
+# curl -i "http://localhost:8080/api/stores/nearest?latitude=51.778461&longitude=4.615551"
 GET {{baseUrl}}/api/stores/nearest?latitude=51.778461&longitude=4.615551
 Accept: application/json
 
@@ -29,6 +34,7 @@ Accept: application/json
 %}
 
 ### Valid coordinates outside coverage still produce results
+# curl -i "http://localhost:8080/api/stores/nearest?latitude=0&longitude=0"
 GET {{baseUrl}}/api/stores/nearest?latitude=0&longitude=0
 Accept: application/json
 
@@ -40,6 +46,7 @@ Accept: application/json
 %}
 
 ### Missing required coordinate returns 400
+# curl -i "http://localhost:8080/api/stores/nearest?latitude=52.0907"
 GET {{baseUrl}}/api/stores/nearest?latitude=52.0907
 Accept: application/json, application/problem+json
 
@@ -52,6 +59,7 @@ Accept: application/json, application/problem+json
 %}
 
 ### Globally out-of-range coordinate returns 400
+# curl -i "http://localhost:8080/api/stores/nearest?latitude=91&longitude=5.1214"
 GET {{baseUrl}}/api/stores/nearest?latitude=91&longitude=5.1214
 Accept: application/json, application/problem+json
 
@@ -63,6 +71,7 @@ Accept: application/json, application/problem+json
 %}
 
 ### Minimal health endpoint
+# curl -i "http://localhost:8080/actuator/health"
 GET {{baseUrl}}/actuator/health
 Accept: application/json
 
