@@ -46,7 +46,7 @@ On macOS use `target/nearest-stores-0.0.1-SNAPSHOT.jar`. The JAR contains `store
 GET http://localhost:8080/api/stores/nearest?latitude=52.0907&longitude=5.1214
 ```
 
-The response is a JSON object with `stores` and `warnings` arrays. Each store includes the seed UUID as `id`, address fields, numeric latitude/longitude, and `distanceKm`. Results are ordered by unrounded Haversine distance, then ID for exact ties. Distances use mean Earth radius **6,371.0088 km** and are not road distances or travel times.
+The response is a JSON object with a `stores` array. Each store includes the seed UUID as `id`, address fields, numeric latitude/longitude, and `distanceKm`. Results are ordered by unrounded Haversine distance, then ID for exact ties. Distances use mean Earth radius **6,371.0088 km** and are not road distances or travel times.
 
 Latitude and longitude are required finite numbers in `[-90, 90]` and `[-180, 180]`. Missing, blank, nonnumeric, non-finite, or out-of-range coordinates return `400 application/problem+json` with `type`, `title`, `status`, `detail`, and `instance`. Unexpected failures return a generic `500` and are logged server-side.
 
@@ -76,7 +76,7 @@ java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.data.location=file:C
 
 The loader uses Jackson data binding with default coercion: unknown fields are ignored, numbers and booleans in text fields become strings, and objects or arrays in text fields fail startup. Missing or malformed data, invalid required fields or coordinates, duplicate IDs, and empty datasets fail startup.
 
-The supplied dataset has 587 stores with Dutch-format postal codes. The application treats latitude **50.7 to 53.6** and longitude **3.2 to 7.3** as an approximate coverage box for the European Netherlands. Valid coordinates outside that box still return nearest stores with warning code `OUTSIDE_SUPPORTED_AREA`; invalid global coordinates are rejected.
+The supplied dataset has 587 stores with Dutch-format postal codes. The application treats latitude **50.7 to 53.6** and longitude **3.2 to 7.3** as an approximate coverage box for the European Netherlands. Valid coordinates outside that box still return nearest stores; the service writes a WARN log because the results may be far away. Invalid global coordinates are rejected.
 
 The OpenAPI source is [`src/main/resources/openapi/stores.yaml`](src/main/resources/openapi/stores.yaml). Maven generates API interfaces and response models under `target/generated-sources/openapi`; generated Java is not edited or committed. There is no Swagger UI.
 
@@ -102,12 +102,12 @@ service     StoreService, SearchProperties, DistanceCalculator, HaversineDistanc
  │
 repository  StoreRepository, JsonStoreRepository
  │
-domain      Coordinates, Store, NearestStore, SearchResult, SearchWarning, WarningCode, CoverageArea
+domain      Coordinates, Store, NearestStore, CoverageArea
 
 config      StoreConfiguration and StoreDataProperties wire beans only
 ```
 
-Requests enter the handwritten `StoreController`, which implements the generated OpenAPI interface, converts inputs to domain values, delegates to `StoreService`, and maps domain results back to generated response models. The service applies the configured maximum, calculates distances for all stores, sorts by distance then ID, selects the configured count, and adds any coverage warning. The repository owns JSON parsing and publishes an immutable in-memory snapshot.
+Requests enter the handwritten `StoreController`, which implements the generated OpenAPI interface, converts inputs to domain values, delegates to `StoreService`, and maps nearest stores back to generated response models. The service applies the configured maximum, logs out-of-coverage searches, calculates distances for all stores, sorts by distance then ID, and selects the configured count. The repository owns JSON parsing and publishes an immutable in-memory snapshot.
 
 This full scan and sort is `O(n log n)` and deliberately simple for 587 stores. Updates to the dataset require restart. Generated HTTP models stay at the API boundary; JSON deserialization stays in the repository; business rules live in service or domain.
 

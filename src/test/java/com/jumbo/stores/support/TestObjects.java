@@ -2,9 +2,7 @@ package com.jumbo.stores.support;
 
 import com.jumbo.stores.domain.Coordinates;
 import com.jumbo.stores.domain.NearestStore;
-import com.jumbo.stores.domain.SearchWarning;
 import com.jumbo.stores.domain.Store;
-import com.jumbo.stores.domain.WarningCode;
 
 public final class TestObjects {
     private TestObjects() {
@@ -22,10 +20,6 @@ public final class TestObjects {
 
     public static NearestStore.NearestStoreBuilder nearestStore() {
         return NearestStore.builder().store(store().build()).distanceKm(1.25);
-    }
-
-    public static SearchWarning.SearchWarningBuilder searchWarning() {
-        return SearchWarning.builder().code(WarningCode.OUTSIDE_SUPPORTED_AREA).message("Outside dataset coverage.");
     }
 
 }

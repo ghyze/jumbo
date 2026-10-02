@@ -25,10 +25,10 @@ public final class HttpAssertions {
                 .when().get(PATH);
     }
 
-    public static void assertSuccess(Response response, int count, String... warnings) {
+    public static void assertSuccess(Response response, int count) {
         response.then().statusCode(200).contentType("application/json");
         Map<String, Object> body = response.jsonPath().getMap("$");
-        assertThat(body).containsOnlyKeys("stores", "warnings");
+        assertThat(body).containsOnlyKeys("stores");
         List<Map<String, Object>> stores = response.jsonPath().getList("stores");
         assertThat(stores).hasSize(count);
         double previous = -1;
@@ -49,15 +49,6 @@ public final class HttpAssertions {
             assertThat(distance).isFinite().isGreaterThanOrEqualTo(0);
             assertThat(distance).as("Distances must be ascending").isGreaterThanOrEqualTo(previous);
             previous = distance;
-        }
-        List<Map<String, Object>> actualWarnings = response.jsonPath().getList("warnings");
-        assertThat(actualWarnings).hasSize(warnings.length);
-        assertThat(response.jsonPath().getList("warnings.code")).containsOnly(warnings);
-        for (Map<String, Object> warning : actualWarnings) {
-            assertThat(warning).containsOnlyKeys("code", "message");
-            assertThat(warning.get("code")).isInstanceOf(String.class);
-            assertThat(warning.get("message")).isInstanceOf(String.class);
-            assertThat((String) warning.get("message")).isNotBlank();
         }
     }
 

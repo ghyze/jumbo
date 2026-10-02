@@ -58,6 +58,6 @@ class NearestStoresEndpointTest extends FixtureServer {
     void distinguishesInclusiveGlobalValidityFromInclusiveCoverage(double latitude, double longitude,
                                                                    boolean outside) {
         Response response = search(port, Map.of("latitude", latitude, "longitude", longitude));
-        assertSuccess(response, 5, outside ? new String[]{"OUTSIDE_SUPPORTED_AREA"} : new String[0]);
+        assertSuccess(response, 5);
     }
 }

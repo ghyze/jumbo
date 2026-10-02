@@ -21,11 +21,10 @@ class StoreConfigurationTest {
                     assertThat(context.getBean(DistanceCalculator.class)).isInstanceOf(HaversineDistance.class);
                     var result = context.getBean(StoreService.class)
                             .findNearest(TestObjects.coordinates().build());
-                    assertThat(result.stores()).hasSize(5);
-                    assertThat(result.warnings()).isEmpty();
-                    for (int index = 1; index < result.stores().size(); index++) {
-                        assertThat(result.stores().get(index - 1).distanceKm())
-                                .isLessThanOrEqualTo(result.stores().get(index).distanceKm());
+                    assertThat(result).hasSize(5);
+                    for (int index = 1; index < result.size(); index++) {
+                        assertThat(result.get(index - 1).distanceKm())
+                                .isLessThanOrEqualTo(result.get(index).distanceKm());
                     }
                 });
     }

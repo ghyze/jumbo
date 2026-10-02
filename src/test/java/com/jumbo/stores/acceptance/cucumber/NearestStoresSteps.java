@@ -41,20 +41,10 @@ public class NearestStoresSteps {
         response = search(port, parameters);
     }
 
-    @Then("{int} stores are returned without warnings")
+    @Then("{int} stores are returned")
     public void success(int count) {
         assertThat(response).isNotNull();
         assertSuccess(response, count);
-    }
-
-    @Then("{int} stores are returned with warning {string}")
-    public void warning(int count, String warning) {
-        assertSuccess(response, count, warning);
-    }
-
-    @Then("{int} stores are returned with warnings {string} and {string}")
-    public void combinedWarnings(int count, String first, String second) {
-        assertSuccess(response, count, first, second);
     }
 
     @Then("the first {int} fixture stores are in nearest-first ID-tie order")

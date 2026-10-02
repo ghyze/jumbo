@@ -57,16 +57,14 @@ class StoreControllerTest {
         var body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.getStores().stream().map(store -> store.getId())).containsExactly("store-0", "store-1", "store-2");
-        assertThat(body.getWarnings()).isEmpty();
         assertThat(body.getStores().getFirst().getDistanceKm()).isZero();
     }
 
     @Test
-    void emptyRepositoryReturnsEmptyArrays() {
+    void emptyRepositoryReturnsEmptyStores() {
         var body = controller(5, List.of()).findNearestStores(52.0, 5.0).getBody();
         assertThat(body).isNotNull();
         assertThat(body.getStores()).isEmpty();
-        assertThat(body.getWarnings()).isEmpty();
     }
 
     @ParameterizedTest

@@ -1,7 +1,6 @@
 package com.jumbo.stores.api;
 
 import com.jumbo.stores.api.generated.StoresApi;
-import com.jumbo.stores.api.generated.model.ApiWarning;
 import com.jumbo.stores.api.generated.model.NearestStoresResponse;
 import com.jumbo.stores.api.generated.model.StoreResponse;
 import com.jumbo.stores.domain.Coordinates;
@@ -22,13 +21,9 @@ public class StoreController implements StoresApi {
     @Override
     public ResponseEntity<NearestStoresResponse> findNearestStores(Double latitude, Double longitude) {
         var coordinates = new Coordinates(latitude, longitude);
-        var result = service.findNearest(coordinates);
-        var stores = result.stores().stream().map(StoreController::toResponse).toList();
-        var warnings = result.warnings().stream()
-                .map(warning -> new ApiWarning(ApiWarning.CodeEnum.fromValue(warning.code().name()), warning.message()))
-                .toList();
+        var stores = service.findNearest(coordinates).stream().map(StoreController::toResponse).toList();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(new NearestStoresResponse(stores, warnings));
+                .body(new NearestStoresResponse(stores));
     }
 
     static StoreResponse toResponse(NearestStore nearest) {

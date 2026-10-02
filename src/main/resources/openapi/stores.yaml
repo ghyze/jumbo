@@ -11,7 +11,7 @@ info:
 
     The inclusive approximate coverage box is latitude [50.7, 53.6] and longitude
     [3.2, 7.3]. Globally valid coordinates outside either interval still return
-    results, with an OUTSIDE_SUPPORTED_AREA warning. This box is a fixed coverage
+    results, although results may be far away. This box is a fixed coverage
     heuristic, not a national border or a guarantee about nearby stores.
 tags:
   - name: Stores
@@ -26,8 +26,7 @@ paths:
         Return nearest-store entries sorted by increasing distance, then ID for exact
         ties. All seed stores are candidates regardless of opening hours,
         collection-point status, or location type. The configured maximum result
-        count is used for every request. Warnings never change a successful
-        response's status.
+        count is used for every request.
 
         Examples below use an illustrative three-store dataset to keep responses
         concise; the production dataset has more stores.
@@ -58,7 +57,7 @@ paths:
           example: 5.1214
       responses:
         '200':
-          description: Nearest stores and any non-blocking warnings.
+          description: Nearest stores.
           content:
             application/json:
               schema:
@@ -101,9 +100,8 @@ paths:
                         latitude: 52.1107
                         longitude: 5.1214
                         distanceKm: 2.223901604671309
-                    warnings: []
                 outsideCoverage:
-                  summary: Valid position (0, 0); non-blocking coverage warning
+                  summary: Valid position (0, 0) outside the approximate coverage box
                   value:
                     stores:
                       - &farStore
@@ -121,10 +119,6 @@ paths:
                         distanceKm: 5813.0124353538
                       - <<: *thirdStore
                         distanceKm: 5814.0124353538
-                    warnings:
-                      - &coverageWarning
-                        code: OUTSIDE_SUPPORTED_AREA
-                        message: The dataset covers the Netherlands; this location is outside the approximate coverage area and results may be far away.
         '400':
           description: A required coordinate is missing, or a query parameter is invalid.
           content:
@@ -181,18 +175,13 @@ components:
   schemas:
     NearestStoresResponse:
       type: object
-      required: [stores, warnings]
+      required: [stores]
       properties:
         stores:
           type: array
           description: Nearest stores sorted by unrounded distance, then ID for exact ties.
           items:
             $ref: '#/components/schemas/StoreResponse'
-        warnings:
-          type: array
-          description: Empty when the coverage warning does not apply.
-          items:
-            $ref: '#/components/schemas/ApiWarning'
     StoreResponse:
       type: object
       required:
@@ -257,19 +246,6 @@ components:
             Unrounded Haversine distance in kilometres, using Earth radius
             6371.0088 km. Not driving distance or travel time.
           example: 1.1119508023352598
-    ApiWarning:
-      type: object
-      required: [code, message]
-      properties:
-        code:
-          type: string
-          enum: [OUTSIDE_SUPPORTED_AREA]
-          description: Machine-readable warning code.
-          example: OUTSIDE_SUPPORTED_AREA
-        message:
-          type: string
-          description: Human-readable explanation of the non-blocking warning.
-          example: The dataset covers the Netherlands; this location is outside the approximate coverage area and results may be far away.
     Problem:
       type: object
       description: RFC 9457 problem details without stack traces or implementation details.
