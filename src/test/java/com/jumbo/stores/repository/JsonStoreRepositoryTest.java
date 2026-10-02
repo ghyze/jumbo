@@ -4,21 +4,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import com.jumbo.stores.domain.Coordinates;
+import com.jumbo.stores.domain.Store;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.core.io.AbstractResource;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 
+@ExtendWith(OutputCaptureExtension.class)
 class JsonStoreRepositoryTest {
     @Test
     void mapsActualRootStructureAndEveryFieldIgnoringMetadata() {
@@ -203,8 +208,8 @@ class JsonStoreRepositoryTest {
     }
 
     @Test
-    void invalidStoreRetainsResourceIdAndOriginalCause() {
-        var failure = catchThrowable(() -> repository("""
+    void skipsInvalidStoreWithWarningAndLoadsTheRest(CapturedOutput output) {
+        var repository = repository("""
                 {
                   "stores": [
                     {
@@ -227,21 +232,28 @@ class JsonStoreRepositoryTest {
                     }
                   ]
                 }
+                """);
+
+        assertThat(repository.findAll()).extracting(Store::id).containsExactly("seed-a");
+        assertThat(output).contains("WARN")
+                .contains("Skipping invalid store at stores[1]: store 'seed-b': city must not be blank");
+    }
+
+    @Test
+    void failsWhenNoValidStoresRemain(CapturedOutput output) {
+        var failure = catchThrowable(() -> repository("""
+                {"stores": [{"uuid": "broken"}, 42]}
                 """));
 
-        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "store 'seed-b': city must not be blank");
-        assertThat(failure.getCause().getCause()).hasMessage("city must not be blank");
+        assertThat(failure).isInstanceOf(IllegalStateException.class)
+                .hasMessage("Failed to load stores from Byte array resource [fixture]: no valid stores found");
+        assertThat(output).contains("stores[0]").contains("stores[1]");
     }
 
     @ParameterizedTest
     @MethodSource("blankRequiredFields")
-    void domainRejectsBlankStoreFieldsWithRepositoryContext(String json, String id, String domainMessage) {
-        var failure = catchThrowable(() -> repository(json));
-
-        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "store '" + id + "': " + domainMessage);
-        assertThat(failure.getCause().getCause()).hasMessage(domainMessage);
+    void skipsStoresWithBlankRequiredFields(String json, String id, String domainMessage, CapturedOutput output) {
+        assertOnlyStoreSkipped(json, "store '" + id + "': " + domainMessage, output);
     }
 
     static Stream<Arguments> blankRequiredFields() {
@@ -305,7 +317,7 @@ class JsonStoreRepositoryTest {
 
     @ParameterizedTest
     @MethodSource("invalidShapes")
-    void rejectsInvalidRootStoresOrEntryShape(String json, String expected) {
+    void rejectsInvalidDocumentShape(String json, String expected) {
         var failure = catchThrowable(() -> repository(json));
 
         assertThat(failure).hasMessageContaining("fixture");
@@ -317,16 +329,19 @@ class JsonStoreRepositoryTest {
         return Stream.of(
                 Arguments.of("", "No content to map"),
                 Arguments.of("{", "Unexpected end-of-input"),
-                Arguments.of("null", "stores must be a nonempty array"),
+                Arguments.of("null", "no valid stores found"),
                 Arguments.of("[]", "from Array value"),
                 Arguments.of("42", "from Number value (42)"),
-                Arguments.of("{}", "stores must be a nonempty array"),
-                Arguments.of("{\"stores\": null}", "stores must be a nonempty array"),
+                Arguments.of("{}", "no valid stores found"),
+                Arguments.of("{\"stores\": null}", "no valid stores found"),
                 Arguments.of("{\"stores\": {}}", "[\"stores\"]"),
-                Arguments.of("{\"stores\": []}", "stores must be a nonempty array"),
-                Arguments.of("{\"stores\": [null]}", "Invalid `null` value"),
-                Arguments.of("{\"stores\": [42]}", "[\"stores\"]->java.util.ArrayList[0]"),
-                Arguments.of("{\"stores\": [[]]}", "[\"stores\"]->java.util.ArrayList[0]"));
+                Arguments.of("{\"stores\": []}", "no valid stores found"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "42", "[]", "\"text\""})
+    void skipsEntriesThatAreNotObjects(String entry, CapturedOutput output) {
+        assertOnlyStoreSkipped("{\"stores\": [" + entry + "]}", "store must be an object", output);
     }
 
     @Test
@@ -337,8 +352,8 @@ class JsonStoreRepositoryTest {
     }
 
     @Test
-    void rejectsDuplicateIds() {
-        var failure = catchThrowable(() -> repository("""
+    void keepsFirstStoreAndSkipsDuplicateIds(CapturedOutput output) {
+        var repository = repository("""
                 {
                   "stores": [
                     {
@@ -361,10 +376,10 @@ class JsonStoreRepositoryTest {
                     }
                   ]
                 }
-                """));
+                """);
 
-        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "duplicate uuid 'seed-a'");
+        assertThat(repository.findAll()).extracting(Store::addressName).containsExactly("Jumbo First");
+        assertThat(output).contains("Skipping invalid store at stores[1]: duplicate uuid 'seed-a'");
     }
 
     @ParameterizedTest
@@ -375,12 +390,9 @@ class JsonStoreRepositoryTest {
             "postalCode, postalCode must not be blank",
             "street, street must not be blank"
     })
-    void rejectsMissingRequiredTextFields(String field, String message) {
-        var failure = catchThrowable(() -> repository(requiredFieldMissing(field)));
-
+    void skipsStoresMissingRequiredTextFields(String field, String message, CapturedOutput output) {
         var id = field.equals("uuid") ? "null" : "seed-a";
-        assertThat(failure).hasMessage("Failed to load stores from Byte array resource [fixture]: "
-                + "store '" + id + "': " + message);
+        assertOnlyStoreSkipped(requiredFieldMissing(field), "store '" + id + "': " + message, output);
     }
 
     @Test
@@ -412,11 +424,9 @@ class JsonStoreRepositoryTest {
 
     @ParameterizedTest
     @MethodSource("objectOrArrayStringFields")
-    void rejectsObjectsAndArraysInStringFields(String json, String path) {
-        var failure = catchThrowable(() -> repository(json));
-
-        assertThat(failure).hasMessageContaining("Cannot deserialize value of type `java.lang.String`");
-        assertThat(failure).hasMessageContaining("[\"" + path + "\"]");
+    void skipsStoresWithObjectsAndArraysInStringFields(String json, String path, CapturedOutput output) {
+        assertOnlyStoreSkipped(json, "[\"" + path + "\"]", output);
+        assertThat(output).contains("Cannot deserialize value of type `java.lang.String`");
     }
 
     static Stream<Arguments> objectOrArrayStringFields() {
@@ -459,11 +469,8 @@ class JsonStoreRepositoryTest {
 
     @ParameterizedTest
     @MethodSource("missingCoordinates")
-    void rejectsMissingCoordinates(String json, String expectedMessage) {
-        var failure = catchThrowable(() -> repository(json));
-
-        assertThat(failure).hasMessageStartingWith("Failed to load stores from Byte array resource [fixture]: ")
-                .hasMessageContaining(expectedMessage);
+    void skipsStoresWithMissingCoordinates(String json, String expectedMessage, CapturedOutput output) {
+        assertOnlyStoreSkipped(json, expectedMessage, output);
     }
 
     static Stream<Arguments> missingCoordinates() {
@@ -503,8 +510,9 @@ class JsonStoreRepositoryTest {
 
     @ParameterizedTest
     @MethodSource("invalidCoordinates")
-    void rejectsUnparseableNonfiniteAndOutOfRangeCoordinates(String field, String value, String expectedMessage) {
-        var failure = catchThrowable(() -> repository("""
+    void skipsStoresWithUnparseableNonfiniteAndOutOfRangeCoordinates(String field, String value,
+                                                                     String expectedMessage, CapturedOutput output) {
+        assertOnlyStoreSkipped("""
                 {
                   "stores": [
                     {
@@ -519,10 +527,7 @@ class JsonStoreRepositoryTest {
                   ]
                 }
                 """.formatted(field.equals("latitude") ? value : "52.0907",
-                field.equals("longitude") ? value : "5.1214")));
-
-        assertThat(failure).hasMessageStartingWith("Failed to load stores from Byte array resource [fixture]: ")
-                .hasMessageContaining(expectedMessage);
+                field.equals("longitude") ? value : "5.1214"), expectedMessage, output);
     }
 
     static Stream<Arguments> invalidCoordinates() {
@@ -665,6 +670,12 @@ class JsonStoreRepositoryTest {
                     """;
             default -> throw new IllegalArgumentException(field);
         };
+    }
+
+    private static void assertOnlyStoreSkipped(String json, String reason, CapturedOutput output) {
+        assertThat(catchThrowable(() -> repository(json)))
+                .hasMessage("Failed to load stores from Byte array resource [fixture]: no valid stores found");
+        assertThat(output).contains("Skipping invalid store at stores[0]: ").contains(reason);
     }
 
     private static JsonStoreRepository repository(String json) {

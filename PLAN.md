@@ -95,6 +95,7 @@ If adopted later, keep MapStruct interfaces at the boundaries, use Spring compon
 - Load the complete resource synchronously during bean initialization, parse coordinate strings into numeric domain values, and publish one immutable snapshot before serving requests.
 - Validate unique/nonblank IDs, required response fields, and finite/in-range coordinates. Ignore irrelevant seed fields and metadata, but do not silently drop malformed stores.
 - Proposed startup policy: a missing/unreadable resource, malformed document, empty dataset, duplicate ID, or invalid store fails startup with a clear error identifying the issue. A malformed deployment should not look like a healthy service with incomplete results.
+- Superseded during implementation: an invalid store entry or duplicate ID is now skipped with a WARN log, so a single bad record no longer takes the whole service down. Startup still fails for a missing, unreadable or malformed file, or when no valid stores remain.
 - Never read the file per request. Changes to the file require a restart. Return an immutable collection of immutable stores so concurrent requests cannot alter shared data.
 
 ### Service

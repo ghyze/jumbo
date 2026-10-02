@@ -74,7 +74,7 @@ The default data location is `classpath:stores.json`; override it with a Spring 
 java -jar target\nearest-stores-0.0.1-SNAPSHOT.jar --stores.data.location=file:C:\data\stores.json
 ```
 
-The loader uses Jackson data binding with default coercion: unknown fields are ignored, numbers and booleans in text fields become strings, and objects or arrays in text fields fail startup. Missing or malformed data, invalid required fields or coordinates, duplicate IDs, and empty datasets fail startup.
+The loader uses Jackson data binding with default coercion: unknown fields are ignored, and numbers and booleans in text fields become strings. A store entry with invalid data is skipped with a WARN log that names its index and the reason, and the remaining stores still load. Invalid data includes missing or blank required fields, objects or arrays in text fields, missing or invalid coordinates, and a duplicate ID (the first occurrence is kept). Startup fails only when the file is missing, unreadable or not well-formed JSON, or when it contains no valid stores.
 
 The supplied dataset has 587 stores with Dutch-format postal codes. The application treats latitude **50.7 to 53.6** and longitude **3.2 to 7.3** as an approximate coverage box for the European Netherlands. Valid coordinates outside that box still return nearest stores; the service writes a WARN log because the results may be far away. Invalid global coordinates are rejected.
 
