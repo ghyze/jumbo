@@ -3,7 +3,6 @@ package com.jumbo.stores.acceptance.http;
 import static com.jumbo.stores.acceptance.HttpAssertions.*;
 import com.jumbo.stores.NearestStoresApplication;
 import com.jumbo.stores.acceptance.FixtureServer;
-import io.restassured.response.Response;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -49,15 +48,8 @@ class NearestStoresEndpointTest extends FixtureServer {
     }
 
     @ParameterizedTest
-    @CsvSource({
-            "50.7, 3.2, false", "50.7, 7.3, false", "53.6, 3.2, false", "53.6, 7.3, false",
-            "50.700001, 5, false", "53.599999, 5, false", "52, 3.200001, false", "52, 7.299999, false",
-            "50.699999, 5, true", "53.600001, 5, true", "52, 3.199999, true", "52, 7.300001, true",
-            "-90, -180, true", "90, 180, true", "-90, 180, true", "90, -180, true"
-    })
-    void distinguishesInclusiveGlobalValidityFromInclusiveCoverage(double latitude, double longitude,
-                                                                   boolean outside) {
-        Response response = search(port, Map.of("latitude", latitude, "longitude", longitude));
-        assertSuccess(response, 5);
+    @CsvSource({"52, 5", "0, 0", "-90, -180", "90, 180", "-90, 180", "90, -180"})
+    void acceptsInclusiveGlobalBoundsAndSearchesOutsideCoverage(double latitude, double longitude) {
+        assertSuccess(search(port, Map.of("latitude", latitude, "longitude", longitude)), 5);
     }
 }

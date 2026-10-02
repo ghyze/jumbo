@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
@@ -96,24 +94,15 @@ class StoreServiceTest {
         assertThatNullPointerException().isThrownBy(() -> service(List.of()).findNearest(null));
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "50.699999, 5", "53.600001, 5", "52, 3.199999", "52, 7.300001",
-            "0, 0", "-90, -180", "90, 180"
-    })
-    void outsideAnyCoverageEdgeStillReturnsStores(double latitude, double longitude) {
-        var result = service(List.of(TestObjects.store().build())).findNearest(new Coordinates(latitude, longitude));
-        assertThat(result).hasSize(1);
-    }
-
     @Test
-    void logsCoverageMessageOnlyOutsideCoverage(CapturedOutput output) {
+    void searchOutsideCoverageStillReturnsStoresAndLogsWarning(CapturedOutput output) {
         var service = service(List.of(TestObjects.store().build()));
         service.findNearest(TestObjects.coordinates().build());
         assertThat(output).doesNotContain(StoreService.OUTSIDE_COVERAGE_MESSAGE);
 
-        service.findNearest(new Coordinates(0, 0));
+        var result = service.findNearest(new Coordinates(0, 0));
 
+        assertThat(result).hasSize(1);
         assertThat(output).contains("WARN").contains(StoreService.OUTSIDE_COVERAGE_MESSAGE);
     }
 

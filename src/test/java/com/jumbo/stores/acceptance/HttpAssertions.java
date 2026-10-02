@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.restassured.response.Response;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public final class HttpAssertions {
     public static final String PATH = "/api/stores/nearest";
